@@ -1,0 +1,35 @@
+record:
+  repo_id: &repo_id "scylearning/ur5e_keyboard" #huggingface repo: <hf_username>/<dataset_repo_id>
+  fps: 15 # dataset and camera frame rate
+
+  robot:
+    ip: &ip "192.168.131.11" # robot_ip
+    gripper_port: &gripper_port "/dev/ur5e_left_gripper" # gripper_port
+
+  task:
+    description: "Pick up the red cube and place it on the blue cube." # task description
+    num_episodes: 1 # number of episodes to record
+    display: True # Whether to display the data during recording
+
+  time:
+    episode_time_sec: 60 # max time per episode in seconds
+    reset_time_sec: 60 # max time to reset between episodes in seconds
+    save_meta_period: 1 # Save metadata after every N episodes
+
+  cameras:
+    wrist_cam_serial: "332322070928" # wrist camera serial number
+    exterior_cam_serial: "213522070689" # exterior camera serial number
+
+  storage:
+    push_to_hub: False # whether to push the dataset to your huggingface repo after recording
+
+replay:
+  repo_id: *repo_id
+  episode_idx: 0 # episode index to replay
+  robot:
+    ip: *ip
+    gripper_port: *gripper_port
+
+visualize:
+  repo_id: *repo_id
+  episode_index: 0 # episode index to visualize
