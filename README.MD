@@ -12,13 +12,12 @@ conda activate ur_data
 ```bash
 # Install specific version 0.3.4
 git clone https://github.com/huggingface/lerobot.git
-cd lerobot
-pip install -e .
+pip install -e lerobot
 ```
 
 ### 1.3 Clone and Install UR5e Teleoperation Control Source
 ```bash
-mkdir ur_data_collection
+mkdir ur_data_collection && cd ur_data_collection
 git clone https://github.com/scy-v/lerobot_ur5e_keyteleop.git
 cd lerobot_ur5e_keyteleop
 pip install -e lerobot_robot_ur5e
