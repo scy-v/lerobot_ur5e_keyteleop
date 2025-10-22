@@ -12,13 +12,13 @@ conda activate ur_data
 ```bash
 # 安装指定版本 0.3.4
 git clone https://github.com/huggingface/lerobot.git
-cd lerobot
-pip install -e .
+pip install -e lerobot
 ```
 
 ### 1.3 克隆并安装 UR5e 遥操作控制源码
 ```bash
-git clone ...git
+mkdir ur_data_collection && cd ur_data_collection
+git clone https://github.com/scy-v/lerobot_ur5e_keyteleop.git
 cd lerobot_ur5e_keyboard
 pip install -e lerobot_robot_ur5e
 pip install -e lerobot_teleoperator_ur5e
@@ -28,11 +28,11 @@ pip install -e lerobot_teleoperator_ur5e
 
 ### 2.1 获取 RealSense 相机序列号
 ```bash
-bash scripts/rs_devices.py
+python scripts/rs_devices.py
 ```
 
 ### 2.2 固定夹爪串口映射
-例如，将夹爪映射到 `"/dev/ur5e_left_gripper"`：
+例如，将夹爪映射到 `/dev/ur5e_left_gripper`：
 ```bash
 bash scripts/map_gripper.sh <gripper_port_name>
 ```

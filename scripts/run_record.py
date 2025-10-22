@@ -1,4 +1,5 @@
 import yaml
+from pathlib import Path
 from typing import Dict, Any
 from lerobot_robot_ur5e import UR5eConfig, UR5e
 from lerobot_teleoperator_ur5e import UR5eTeleopConfig, UR5eTeleop
@@ -157,7 +158,7 @@ def main(record_cfg: RecordConfig):
         dataset.push_to_hub()
 
 if __name__ == "__main__":
-    with open("./config/cfg.yaml", 'r') as f:
+    with open(Path(__file__).parent / "config" / "cfg.yaml", 'r') as f:
         cfg = yaml.safe_load(f)
 
     record_cfg = RecordConfig(cfg["record"])

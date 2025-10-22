@@ -10,7 +10,7 @@ setup(
     install_requires=[
         "pydhgripper",
         "pyrealsense2",
-        "ur-rtde"
+        "ur-rtde",
     ],
     python_requires=">=3.10",
     classifiers=[

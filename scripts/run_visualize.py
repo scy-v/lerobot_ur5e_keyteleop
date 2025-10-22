@@ -2,6 +2,7 @@ import argparse
 import gc
 import logging
 import time
+from pathlib import Path
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -86,8 +87,8 @@ def visualize_dataset(
     for batch in tqdm.tqdm(dataloader, total=len(dataloader)):
         # iterate over the batch
         for i in range(len(batch["index"])):
-            rr.set_time_sequence("frame_index", batch["frame_index"][i].item())
-            rr.set_time_seconds("timestamp", batch["timestamp"][i].item())
+            rr.set_time("frame_index", sequence=batch["frame_index"][i].item())
+            rr.set_time("timestamp", timestamp=batch["timestamp"][i].item())
         
             # display each camera image
             for key in dataset.meta.camera_keys:
@@ -101,21 +102,21 @@ def visualize_dataset(
             # display each dimension of action space (e.g. actuators command)
             if ACTION in batch:
                 for dim_idx, val in enumerate(batch[ACTION][i]):
-                    rr.log(f"{ACTION}/{features['action']['names'][dim_idx]}", rr.Scalar(val.item()))
+                    rr.log(f"{ACTION}/{features['action']['names'][dim_idx]}", rr.Scalars(val.item()))
 
             # display each dimension of observed state space (e.g. agent position in joint space)
             if OBS_STATE in batch:
                 for dim_idx, val in enumerate(batch[OBS_STATE][i]):
-                    rr.log(f"observation.state/{features['observation.state']['names'][dim_idx]}", rr.Scalar(val.item()))
+                    rr.log(f"observation.state/{features['observation.state']['names'][dim_idx]}", rr.Scalars(val.item()))
 
             if DONE in batch:
-                rr.log(DONE, rr.Scalar(batch[DONE][i].item()))
+                rr.log(DONE, rr.Scalars(batch[DONE][i].item()))
 
             if REWARD in batch:
-                rr.log(REWARD, rr.Scalar(batch[REWARD][i].item()))
+                rr.log(REWARD, rr.Scalars(batch[REWARD][i].item()))
 
             if "next.success" in batch:
-                rr.log("next.success", rr.Scalar(batch["next.success"][i].item()))
+                rr.log("next.success", rr.Scalars(batch["next.success"][i].item()))
 
     if mode == "local" and save:
         # save .rrd locally
@@ -136,7 +137,7 @@ def visualize_dataset(
 
 
 def main():
-    with open("./config/cfg.yaml", 'r') as f:
+    with open(Path(__file__).parent / "config" / "cfg.yaml", 'r') as f:
         cfg = yaml.safe_load(f)
 
     parser = argparse.ArgumentParser()
