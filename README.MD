@@ -18,8 +18,9 @@ pip install -e .
 
 ### 1.3 Clone and Install UR5e Teleoperation Control Source
 ```bash
-git clone ...git
-cd lerobot_ur5e_keyboard
+mkdir ur_data_collection
+git clone https://github.com/scy-v/lerobot_ur5e_keyteleop.git
+cd lerobot_ur5e_keyteleop
 pip install -e lerobot_robot_ur5e
 pip install -e lerobot_teleoperator_ur5e
 ```
