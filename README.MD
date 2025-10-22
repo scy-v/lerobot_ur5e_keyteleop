@@ -28,7 +28,7 @@ pip install -e lerobot_teleoperator_ur5e
 
 ### 2.1 Get RealSense Camera Serial Number
 ```bash
-bash scripts/rs_devices.py
+python scripts/rs_devices.py
 ```
 
 ### 2.2 Map Gripper Serial Port
