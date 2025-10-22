@@ -32,7 +32,7 @@ python scripts/rs_devices.py
 ```
 
 ### 2.2 Map Gripper Serial Port
-For example, map the gripper to `"/dev/ur5e_left_gripper"`:
+For example, map the gripper to `/dev/ur5e_left_gripper`:
 ```bash
 bash scripts/map_gripper.sh <gripper_port_name>
 ```
