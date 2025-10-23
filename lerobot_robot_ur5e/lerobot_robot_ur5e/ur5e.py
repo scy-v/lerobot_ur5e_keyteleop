@@ -133,15 +133,15 @@ class UR5e(Robot):
         if "delta_x" in action and "delta_y" in action and "delta_z" in action and "joint_position" not in action:
             tcp_pose = self._arm["rtde_r"].getActualTCPPose()
             speed = 0.5           # m/s
-            acceleration = 0.5     # m/s^2
-            time = 0.1            # 通常0即可
-            lookahead_time = 0.1   # 轨迹预见时间
-            gain = 300             # 控制增益
+            acceleration = 0.5     # m/s²
+            time = 0.1           # seconds
+            lookahead_time = 0.1   
+            gain = 300           
             tcp_pose = [
                 tcp_pose[0] + action["delta_x"],
                 tcp_pose[1] + action["delta_y"],
                 tcp_pose[2] + action["delta_z"],
-                tcp_pose[3],  # 保持当前姿态
+                tcp_pose[3],  # keep orientation
                 tcp_pose[4],
                 tcp_pose[5],
             ]
