@@ -11,6 +11,7 @@ conda activate ur_data
 ### 1.2 Install lerobot
 ```bash
 # Install specific version 0.3.4
+# git checkout da5d2f3e9187fa4690e6667fe8b294cae49016d6
 git clone https://github.com/huggingface/lerobot.git
 pip install -e lerobot
 ```
