@@ -11,6 +11,7 @@ conda activate ur_data
 ### 1.2 安装 lerobot
 ```bash
 # 安装指定版本 0.3.4
+# git checkout da5d2f3e9187fa4690e6667fe8b294cae49016d6
 git clone https://github.com/huggingface/lerobot.git
 pip install -e lerobot
 ```
@@ -69,4 +70,13 @@ python scripts/run_replay.py #注意cfg配置
 ## 5. 数据集可视化
 ```bash
 python scripts/run_visualize.py #注意cfg配置
+```
+
+## 6. 数据集合并
+如果你在不同阶段分别录制了数据集，请确保各阶段的数据集具有不同的 `repo_id`, 完成录制后，可通过以下命令将它们合并为一个数据集: 
+```bash
+lerobot-edit-dataset 
+    --repo_id <merged_repo_id> 
+    --operation.type merge 
+    --operation.repo_ids "['<repo_id_1>', '<repo_id2>']"
 ```
