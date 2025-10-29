@@ -62,7 +62,7 @@ huggingface-cli whoami  # Verify successful login
 python scripts/run_record.py
 ```
 
-## 4. Dataset Playback
+## 4. Dataset Replay
 ```bash
 python scripts/run_replay.py # Make sure cfg.yaml is properly configured
 ```
