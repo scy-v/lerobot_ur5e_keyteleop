@@ -10,7 +10,8 @@ record:
     description: "Pick up the red cube and place it on the blue cube." # task description
     num_episodes: 1 # number of episodes to record
     display: True # Whether to display the data during recording
-
+    resume: False
+    
   time:
     episode_time_sec: 60 # max time per episode in seconds
     reset_time_sec: 60 # max time to reset between episodes in seconds

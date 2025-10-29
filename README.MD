@@ -72,7 +72,13 @@ python scripts/run_replay.py # Make sure cfg.yaml is properly configured
 python scripts/run_visualize.py # Make sure cfg.yaml is properly configured
 ```
 
-## 6. Merge Datasets
+## 6. Dataset Appending and Resume
+If you already recorded an old dataset with `repo_id`, set `resume: True` in `cfg.yaml`to append recording new data to the same dataset. Then, run the following command:
+```bash
+python scripts/run_record.py
+```
+
+## 7. Merge Datasets
 If you recorded data in multiple stages, ensure each dataset has a unique `repo_id`. Use the following command to merge them into a single dataset:
 ```bash
 lerobot-edit-dataset 
@@ -80,3 +86,16 @@ lerobot-edit-dataset
     --operation.type merge 
     --operation.repo_ids "['<repo_id_1>', '<repo_id2>']"
 ```
+
+## 8. Recording Control Keys
+
+1. **Right Arrow Key**  
+   - Press once to finish the current episode and save the data.  
+   - The system enters **reset** mode automatically. Move the slave arm to the start pose using the master arm.  
+   - Press again to start recording the next episode.
+
+2. **Left Arrow Key**  
+   - Press to restart the current episode recording (overwrite the current data).
+
+3. **Esc Key**  
+   - Press to exit the recording session and save all recorded episodes.

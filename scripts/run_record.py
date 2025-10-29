@@ -12,6 +12,7 @@ from lerobot.utils.visualization_utils import init_rerun
 from lerobot.utils.control_utils import init_keyboard_listener
 from lerobot.datasets.lerobot_dataset import LeRobotDataset
 from lerobot.datasets.utils import hw_to_dataset_features
+from lerobot.utils.control_utils import sanity_check_dataset_robot_compatibility
 import logging
 logging.basicConfig(level=logging.WARNING)
 
@@ -35,7 +36,8 @@ class RecordConfig:
         self.num_episodes: int = task.get("num_episodes", 1)
         self.display: bool = task.get("display", True)
         self.task_description: str = task.get("task_description", "default task")
-
+        self.resume: bool = task.get("resume", "False")
+        
         # time config
         self.episode_time_sec: int = time.get("episode_time_sec", 60)
         self.reset_time_sec: int = time.get("reset_time_sec", 10)
@@ -84,15 +86,25 @@ def main(record_cfg: RecordConfig):
     obs_features = hw_to_dataset_features(robot.observation_features, "observation", use_video=True)
     dataset_features = {**action_features, **obs_features}
 
-    # # Create the dataset
-    dataset = LeRobotDataset.create(
-        repo_id=record_cfg.repo_id,
-        fps=record_cfg.fps,
-        features=dataset_features,
-        robot_type=robot.name,
-        use_videos=True,
-        image_writer_threads=4,
-    )
+    if record_cfg.resume:
+        dataset = LeRobotDataset(
+            record_cfg.repo_id,
+        )
+
+        if hasattr(robot, "cameras") and len(robot.cameras) > 0:
+            dataset.start_image_writer()
+        sanity_check_dataset_robot_compatibility(dataset, robot, record_cfg.fps, dataset_features)
+    else:
+        # # Create the dataset
+        dataset = LeRobotDataset.create(
+            repo_id=record_cfg.repo_id,
+            fps=record_cfg.fps,
+            features=dataset_features,
+            robot_type=robot.name,
+            use_videos=True,
+            image_writer_threads=4,
+        )
+
     # Set the episode metadata buffer size to 1, so that each episode is saved immediately
     dataset.meta.metadata_buffer_size = record_cfg.save_mera_period
 
@@ -123,6 +135,15 @@ def main(record_cfg: RecordConfig):
             display_data=record_cfg.display,
         )
 
+        if events["rerecord_episode"]:
+            logging.info("Re-recording episode")
+            events["rerecord_episode"] = False
+            events["exit_early"] = False
+            dataset.clear_episode_buffer()
+            continue
+
+        dataset.save_episode()
+
         # Reset the environment if not stopping or re-recording
         if not events["stop_recording"] and (episode_idx < record_cfg.num_episodes - 1 or events["rerecord_episode"]):
             log_say("Reset the environment", play_sounds=False)
@@ -139,14 +160,6 @@ def main(record_cfg: RecordConfig):
                 display_data=record_cfg.display,
             )
 
-        if events["rerecord_episode"]:
-            log_say("Re-recording episode", play_sounds=False)
-            events["rerecord_episode"] = False
-            events["exit_early"] = False
-            dataset.clear_episode_buffer()
-            continue
-
-        dataset.save_episode()
         episode_idx += 1
 
     # Clean up

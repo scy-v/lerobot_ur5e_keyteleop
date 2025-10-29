@@ -72,7 +72,13 @@ python scripts/run_replay.py #注意cfg配置
 python scripts/run_visualize.py #注意cfg配置
 ```
 
-## 6. 数据集合并
+## 6. 数据集追加与恢复
+如果你已经在指定的 `repo_id` 下录制过数据集，可以在 `cfg.yaml` 中将 `resume` 设置为 `True`，以在现有数据集的基础上继续录制新的数据。然后运行以下命令：
+```bash
+python scripts/run_record.py
+```
+
+## 7. 数据集合并
 如果你在不同阶段分别录制了数据集，请确保各阶段的数据集具有不同的 `repo_id`, 完成录制后，可通过以下命令将它们合并为一个数据集: 
 ```bash
 lerobot-edit-dataset 
@@ -80,3 +86,15 @@ lerobot-edit-dataset
     --operation.type merge 
     --operation.repo_ids "['<repo_id_1>', '<repo_id2>']"
 ```
+
+## 8. 录制控制按键说明
+1. **右方向键**  
+   - 按下后：结束当前 episode 的录制并保存数据
+   - 系统会自动进入 **复位（reset）** 阶段，请通过主臂将从臂归位初始位姿
+   - 再次按下：开始录制下一个 episode
+
+2. **左方向键**  
+   - 按下后：重新开始当前 episode 的录制
+
+3. **Esc 键**  
+   - 按下后：退出整个录制任务，并保存当前已录制的数据
