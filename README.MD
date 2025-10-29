@@ -91,7 +91,7 @@ lerobot-edit-dataset
 
 1. **Right Arrow Key**  
    - Press once to finish the current episode and save the data.  
-   - The system enters **reset** mode automatically. Move the slave arm to the start pose using the master arm.  
+   - The system enters **reset** mode automatically. Move the slave arm to the start pose.  
    - Press again to start recording the next episode.
 
 2. **Left Arrow Key**  
