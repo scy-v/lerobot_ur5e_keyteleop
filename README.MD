@@ -1,5 +1,16 @@
 # UR5e Data Collection and Playback Guide
 
+##  🚀 Teleoperation Platform Updates
+
+<div align="center">
+
+| Repository | Description | GitHub Link |
+|:---------:|:----------:|:----------:|
+| **lerobot_ur5e_isoteleop** | A master–slave teleoperation framework with joint-level isomorphic mapping for UR5e, built on LeRobot. | [GitHub](https://github.com/scy-v/lerobot_ur5e_isoteleop) |
+| **lerobot_ur_dual_vrteleop** | A dual-arm VR teleoperation framework for UR5/7e robots, built on LeRobot and PICO 4 Ultra. | [GitHub](https://github.com/scy-v/lerobot_ur_dual_vrteleop) |
+
+</div>
+
 ## 1. Environment Setup
 
 ### 1.1 Create and Activate Conda Environment

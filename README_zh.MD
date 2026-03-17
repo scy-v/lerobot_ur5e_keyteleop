@@ -1,5 +1,16 @@
 # UR5e 数据采集与回放指南
 
+##  🚀 遥操作平台更新
+
+<div align="center">
+
+| 仓库 | 功能 | 链接 |
+|-------|------|------|
+| **lerobot_ur5e_isoteleop** | 基于 LeRobot 构建的用于 UR5e 的主从臂遥操作框架，具有关节级同构映射。 | [GitHub](https://github.com/scy-v/lerobot_ur5e_isoteleop) |
+| **lerobot_ur_dual_vrteleop** | 基于 LeRobot 和 PICO 4 Ultra 构建的用于 UR5/7e 机器人的双臂 VR 遥操作框架。 | [GitHub](https://github.com/scy-v/lerobot_ur_dual_vrteleop) |
+
+</div>
+
 ## 1. 环境配置
 
 ### 1.1 创建并激活 conda 环境
