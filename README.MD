@@ -16,7 +16,7 @@
 
 </div>
 
-## 1. Environment Setup
+## 🛠️ 1. Environment Setup
 
 ### 1.1 Create and Activate Conda Environment
 ```bash
@@ -72,7 +72,7 @@ ur5e-help
 # ==================================================
 ```
 
-## 2. Obtain and Configure Necessary Parameters
+## ⚙️ 2. Obtain and Configure Necessary Parameters
 
 ### 2.1 Get RealSense Camera Serial Number
 Please make sure only one camera is connected at a time.
@@ -103,7 +103,7 @@ Key robot fields:
 - `teleop.position_rot_step_size`: keyboard Euler-angle delta for position control.
 - `teleop.force_rot_step_size`: keyboard Euler-angle delta for force control.
 
-## 3. Dataset Recording
+## 📥 3. Dataset Recording
 
 ### 3.1 Upload Data to Hugging Face (Optional)
 1. Set the following in `cfg.yaml`:
@@ -130,12 +130,12 @@ ur5e-record
   <b>Figure 1: Record</b>
 </p>
 
-## 4. Dataset Replay
+## ▶️ 4. Dataset Replay
 ```bash
 ur5e-replay # Make sure cfg.yaml is properly configured
 ```
 
-## 5. Dataset Visualization
+## 📊 5. Dataset Visualization
 ```bash
 ur5e-visualize # Make sure cfg.yaml is properly configured
 ```
@@ -154,14 +154,14 @@ ur5e-visualize # Make sure cfg.yaml is properly configured
 
 The data window shows the action for each frame and lets you select one observation group at a time, such as `tcp_pose`, `tcp_force`, or joint states.
 
-## 6. Dataset Appending and Resume
+## ➕ 6. Dataset Appending and Resume
 If you have already recorded a dataset under the specified `repo_id`, set `resume: True` in `cfg.yaml` and enter the dataset name in `resume_dataset` to continue recording new data on the existing dataset. Then, run the following command:
 
 ```bash
 ur5e-record
 ```
 
-## 7. Merge Datasets
+## 🔗 7. Merge Datasets
 If you recorded data in multiple stages, ensure each dataset has a unique `repo_id`. Use the following command to merge them into a single dataset:
 ```bash
 lerobot-edit-dataset \
@@ -171,7 +171,7 @@ lerobot-edit-dataset \
 ```
 - For more dataset processing commands, see [LeRobot](https://huggingface.co/docs/lerobot/using_dataset_tools).
 
-## 8. Dataset Check and Pruning
+## ✅ 8. Dataset Check and Pruning
 - Run the following command to verify dataset integrity, especially for missing video frames.
 - Note: update `check_dataset.dataset_name` in `cfg.yaml`.
 ```bash
@@ -184,7 +184,7 @@ tools-prune-dataset "[id1,...,idN]"
 ```
 - This tool can remove episodes with missing frames or any specified episodes.
 
-## 9. Recording Control Keys
+## ⌨️ 9. Recording Control Keys
 
 ### 9.1 Episode Control Keys
 1. **Right Arrow Key**
@@ -214,7 +214,7 @@ tools-prune-dataset "[id1,...,idN]"
 | `o` | Latch gripper open |
 | `l` | Latch gripper close |
 
-## 10. Dataset Naming and Recording Details
+## 🗂️ 10. Dataset Naming and Recording Details
 
 ### 10.1 Dataset Naming
 

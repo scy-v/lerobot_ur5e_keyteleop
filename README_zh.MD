@@ -16,7 +16,7 @@
 
 </div>
 
-## 1. 环境配置
+## 🛠️ 1. 环境配置
 
 ### 1.1 创建并激活 conda 环境
 ```bash
@@ -72,7 +72,7 @@ ur5e-help
 # ==================================================
 ```
 
-## 2. 获取和配置必要参数
+## ⚙️ 2. 获取和配置必要参数
 
 ### 2.1 获取 RealSense 相机序列号
 请确保每次仅连接一个相机：
@@ -103,7 +103,7 @@ map_gripper.sh ur5e_left_gripper
 - `teleop.position_rot_step_size`：position 控制下的键盘欧拉角增量。
 - `teleop.force_rot_step_size`：force 控制下的键盘欧拉角增量。
 
-## 3. 数据集记录
+## 📥 3. 数据集记录
 
 ### 3.1 上传数据到 Hugging Face（可选）
 1. 在 `cfg.yaml` 中设置：
@@ -130,12 +130,12 @@ ur5e-record
   <b>Figure 1: Record</b>
 </p>
 
-## 4. 数据集回放
+## ▶️ 4. 数据集回放
 ```bash
 ur5e-replay # 注意 cfg 配置
 ```
 
-## 5. 数据集可视化
+## 📊 5. 数据集可视化
 ```bash
 ur5e-visualize # 注意 cfg 配置
 ```
@@ -154,14 +154,14 @@ ur5e-visualize # 注意 cfg 配置
 
 Episode 数据窗口会显示每一帧的完整 action，并支持选择单个 observation 组进行查看，例如 `tcp_pose`、`tcp_force` 或各关节状态。
 
-## 6. 数据集追加与恢复
+## ➕ 6. 数据集追加与恢复
 如果你已经在指定的 `repo_id` 下录制过数据集，可以在 `cfg.yaml` 中将 `resume` 设置为 `True`，并在 `resume_dataset` 中填写要追加的数据集名称，以便在现有数据集的基础上继续录制。然后运行以下命令：
 
 ```bash
 ur5e-record
 ```
 
-## 7. 数据集合并
+## 🔗 7. 数据集合并
 如果你在不同阶段分别录制了数据集，请确保各阶段的数据集具有不同的 `repo_id`。完成录制后，可通过以下命令将它们合并为一个数据集：
 ```bash
 lerobot-edit-dataset \
@@ -171,7 +171,7 @@ lerobot-edit-dataset \
 ```
 - 更多数据集处理命令，请参考 [LeRobot](https://huggingface.co/docs/lerobot/using_dataset_tools)。
 
-## 8. 数据集检查与裁剪
+## ✅ 8. 数据集检查与裁剪
 - 使用以下命令检查数据集读取是否正确，尤其是视频帧缺失情况。
 - 注意修改 `cfg.yaml` 中的 `check_dataset.dataset_name`。
 ```bash
@@ -184,7 +184,7 @@ tools-prune-dataset "[id1,...,idN]"
 ```
 - 该工具可删除视频帧缺失以及任意指定的 episode。
 
-## 9. 录制控制按键说明
+## ⌨️ 9. 录制控制按键说明
 
 ### 9.1 Episode 控制按键
 1. **右方向键**
@@ -214,7 +214,7 @@ tools-prune-dataset "[id1,...,idN]"
 | `o` | 夹爪保持打开 |
 | `l` | 夹爪保持闭合 |
 
-## 10. 数据集命名与记录详解
+## 🗂️ 10. 数据集命名与记录详解
 
 ### 10.1 数据集命名
 
