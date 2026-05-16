@@ -94,7 +94,8 @@ Key robot fields:
 - `control_space`: `"position"` or `"force"`.
 - `reference_frame`: `"base"` or `"tcp"`.
   - `base`: action delta is expressed in the base frame, and `tcp_pose` observation is absolute.
-  - `tcp`: action delta is expressed in the current TCP frame, and `tcp_pose` observation is relative to the episode reference pose.
+  - `tcp`: action delta is expressed in the current end-effector frame, and `tcp_pose` observation is relative to the episode reference pose.
+  - For consistency across UR TCP-offset changes, `tcp_pose` stores the EE/flange pose converted from UR TCP pose and TCP offset.
 - `init_pose`: reset TCP pose `[x, y, z, rx, ry, rz]`.
 - `init_pos_range`: random reset position range for `[x, y, z]`.
 - `teleop.position_step_size`: keyboard translation delta for position control.

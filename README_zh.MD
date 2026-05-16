@@ -94,7 +94,8 @@ map_gripper.sh ur5e_left_gripper
 - `control_space`：`"position"` 或 `"force"`。
 - `reference_frame`：`"base"` 或 `"tcp"`。
   - `base`：action 增量在 base 坐标系下表达，`tcp_pose` 观测为绝对位姿。
-  - `tcp`：action 增量在当前 TCP 坐标系下表达，`tcp_pose` 观测为相对 episode 参考位姿的变化量。
+  - `tcp`：action 增量在当前末端坐标系下表达，`tcp_pose` 观测为相对 episode 参考位姿的变化量。
+  - 为避免 UR 示教器 TCP offset 变化导致坐标定义不一致，`tcp_pose` 字段实际存储由 UR TCP pose 和 TCP offset 转换得到的 EE/flange 位姿。
 - `init_pose`：复位 TCP 位姿 `[x, y, z, rx, ry, rz]`。
 - `init_pos_range`：复位位置 `[x, y, z]` 的随机范围。
 - `teleop.position_step_size`：position 控制下的键盘平移增量。

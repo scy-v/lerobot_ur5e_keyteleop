@@ -34,7 +34,7 @@ class UR5e(Robot):
         self._gripper_speed = config.gripper_speed
         self._gripper_position = 1.0
         self._last_gripper_position = 1.0
-        self._episode_reference_tcp_pose = None
+        self._episode_reference_ee_pose = None
         self.task_frame = [0, 0, 0, 0, 0, 0]
         self.type = 2
         self._send_action_freq_t = time.perf_counter()
@@ -128,62 +128,31 @@ class UR5e(Robot):
 
     @property
     def _motors_ft(self) -> dict[str, type]:
-        features = {
-            "joint_1.pos": float,
-            "joint_2.pos": float,
-            "joint_3.pos": float,
-            "joint_4.pos": float,
-            "joint_5.pos": float,
-            "joint_6.pos": float,
-            "joint_1.vel": float,
-            "joint_2.vel": float,
-            "joint_3.vel": float,
-            "joint_4.vel": float,
-            "joint_5.vel": float,
-            "joint_6.vel": float,
-            "joint_1.acc": float,
-            "joint_2.acc": float,
-            "joint_3.acc": float,
-            "joint_4.acc": float,
-            "joint_5.acc": float,
-            "joint_6.acc": float,
-            "joint_1.force": float,
-            "joint_2.force": float,
-            "joint_3.force": float,
-            "joint_4.force": float,
-            "joint_5.force": float,
-            "joint_6.force": float,
-            "tcp_pose.x": float,
-            "tcp_pose.y": float,
-            "tcp_pose.z": float,
-            "tcp_pose.rx": float,
-            "tcp_pose.ry": float,
-            "tcp_pose.rz": float,
-            "tcp_speed.x": float,
-            "tcp_speed.y": float,
-            "tcp_speed.z": float,
-            "tcp_speed.rx": float,
-            "tcp_speed.ry": float,
-            "tcp_speed.rz": float,
-            "tcp_acc.x": float,
-            "tcp_acc.y": float,
-            "tcp_acc.z": float,
-            "tcp_force.x": float,
-            "tcp_force.y": float,
-            "tcp_force.z": float,
-            "tcp_force.rx": float,
-            "tcp_force.ry": float,
-            "tcp_force.rz": float,
+        joint_pos_features = {f"joint_{i}.pos": float for i in range(1, 7)}
+        gripper_features = {
+            "gripper_raw_position": float,
+            "gripper_raw_bin": float,
+            "gripper_action_bin": float,
         }
-        if self.config.use_gripper:
-            features.update(
-                {
-                    "gripper_raw_position": float,
-                    "gripper_raw_bin": float,
-                    "gripper_action_bin": float,
-                }
-            )
-        return features
+        tcp_pose_features = {f"tcp_pose.{axis}": float for axis in ["x", "y", "z", "rx", "ry", "rz"]}
+        tcp_vel_features = {f"tcp_speed.{axis}": float for axis in ["x", "y", "z", "rx", "ry", "rz"]}
+        tcp_force_features = {f"tcp_force.{axis}": float for axis in ["x", "y", "z"]}
+        tcp_torque_features = {f"tcp_force.{axis}": float for axis in ["rx", "ry", "rz"]}
+        remaining_features = {
+            **{f"joint_{i}.vel": float for i in range(1, 7)},
+            **{f"joint_{i}.acc": float for i in range(1, 7)},
+            **{f"joint_{i}.force": float for i in range(1, 7)},
+            **{f"tcp_acc.{axis}": float for axis in ["x", "y", "z"]},
+        }
+        return {
+            **joint_pos_features,
+            **gripper_features,
+            **tcp_pose_features,
+            **tcp_vel_features,
+            **tcp_force_features,
+            **tcp_torque_features,
+            **remaining_features,
+        }
 
     @property
     def action_features(self) -> dict[str, type]:
@@ -223,10 +192,26 @@ class UR5e(Robot):
             *R.from_matrix(transform[:3, :3]).as_rotvec().tolist(),
         ]
 
+    def _get_current_tcp_offset(self) -> list[float]:
+        return self._arm["rtde_c"].getTCPOffset()
+
+    def get_ee_pose(self) -> list[float]:
+        tcp_pose = self._arm["rtde_r"].getActualTCPPose()
+        tcp_offset = self._get_current_tcp_offset()
+        return self.tcp_to_ee_pose(tcp_pose, tcp_offset).tolist()
+
+    def _ee_to_tcp_pose(self, ee_pose: list[float] | np.ndarray, tcp_offset: list[float] | np.ndarray) -> list[float]:
+        ee_transform = self._pose_to_transform(ee_pose)
+        offset_transform = self._pose_to_transform(tcp_offset)
+        tcp_transform = ee_transform @ offset_transform
+        return self._transform_to_pose(tcp_transform)
+
     def _target_pose_from_action(self, action: dict[str, Any]) -> list[float]:
-        current_pose = self._arm["rtde_r"].getActualTCPPose()
-        current_position = np.array(current_pose[:3], dtype=float)
-        current_rotation = R.from_rotvec(current_pose[3:]).as_matrix()
+        current_tcp_pose = self._arm["rtde_r"].getActualTCPPose()
+        tcp_offset = self._get_current_tcp_offset()
+        current_ee_pose = self.tcp_to_ee_pose(current_tcp_pose, tcp_offset)
+        current_position = np.array(current_ee_pose[:3], dtype=float)
+        current_rotation = R.from_rotvec(current_ee_pose[3:]).as_matrix()
         delta_position = np.array(
             [float(action["delta_x"]), float(action["delta_y"]), float(action["delta_z"])],
             dtype=float,
@@ -248,7 +233,8 @@ class UR5e(Robot):
         target_transform = np.eye(4)
         target_transform[:3, :3] = target_rotation
         target_transform[:3, 3] = target_position
-        return self._transform_to_pose(target_transform)
+        target_ee_pose = self._transform_to_pose(target_transform)
+        return self._ee_to_tcp_pose(target_ee_pose, tcp_offset)
 
     def _calculate_ft_target(self, action: dict[str, Any]) -> list[float]:
         curr_pose = self._arm["rtde_r"].getActualTCPPose()
@@ -310,19 +296,19 @@ class UR5e(Robot):
             self._send_action_freq_t = now
             self._send_action_freq_count = 0
 
-    def _tcp_pose_euler(self, tcp_pose: list[float] | np.ndarray) -> np.ndarray:
-        tcp_pose = np.array(tcp_pose, dtype=float)
-        tcp_pose_euler = np.zeros(6, dtype=float)
-        tcp_pose_euler[:3] = tcp_pose[:3]
-        tcp_pose_euler[3:] = R.from_rotvec(tcp_pose[3:]).as_euler("xyz")
-        return tcp_pose_euler
+    def _pose_euler(self, pose: list[float] | np.ndarray) -> np.ndarray:
+        pose = np.array(pose, dtype=float)
+        pose_euler = np.zeros(6, dtype=float)
+        pose_euler[:3] = pose[:3]
+        pose_euler[3:] = R.from_rotvec(pose[3:]).as_euler("xyz")
+        return pose_euler
 
-    def _relative_tcp_pose_euler(self, tcp_pose: list[float] | np.ndarray) -> np.ndarray:
-        if self._episode_reference_tcp_pose is None:
-            raise RuntimeError("Episode reference TCP pose is not set. Call set_episode_reference_pose() first.")
+    def _relative_pose_euler(self, pose: list[float] | np.ndarray) -> np.ndarray:
+        if self._episode_reference_ee_pose is None:
+            raise RuntimeError("Episode reference EE pose is not set. Call set_episode_reference_pose() first.")
 
-        reference_transform = self._pose_to_transform(self._episode_reference_tcp_pose)
-        current_transform = self._pose_to_transform(tcp_pose)
+        reference_transform = self._pose_to_transform(self._episode_reference_ee_pose)
+        current_transform = self._pose_to_transform(pose)
         relative_transform = np.linalg.inv(reference_transform) @ current_transform
 
         relative_pose = np.zeros(6, dtype=float)
@@ -334,8 +320,8 @@ class UR5e(Robot):
         if not self.is_connected:
             raise DeviceNotConnectedError(f"{self} is not connected.")
 
-        self._episode_reference_tcp_pose = np.array(self._arm["rtde_r"].getActualTCPPose(), dtype=float)
-        logger.info(f"Set episode reference TCP pose: {self._episode_reference_tcp_pose.tolist()}")
+        self._episode_reference_ee_pose = np.array(self.get_ee_pose(), dtype=float)
+        logger.info(f"Set episode reference EE pose: {self._episode_reference_ee_pose.tolist()}")
 
     def get_observation(self) -> dict[str, Any]:
         if not self.is_connected:
@@ -345,11 +331,11 @@ class UR5e(Robot):
         joint_velocity = self._arm["rtde_r"].getActualQd()
         joint_acceleration = self._arm["rtde_r"].getTargetQdd()
         joint_force = self._arm["rtde_c"].getJointTorques()
-        tcp_pose = self._arm["rtde_r"].getActualTCPPose()
+        tcp_pose = self.get_ee_pose()
         if self.config.reference_frame == "base":
-            observation_tcp_pose = self._tcp_pose_euler(tcp_pose)
+            observation_tcp_pose = self._pose_euler(tcp_pose)
         elif self.config.reference_frame == "tcp":
-            observation_tcp_pose = self._relative_tcp_pose_euler(tcp_pose)
+            observation_tcp_pose = self._relative_pose_euler(tcp_pose)
         else:
             raise ValueError(f"Unsupported reference_frame: {self.config.reference_frame}")
         tcp_speed = self._arm["rtde_r"].getActualTCPSpeed()
@@ -360,22 +346,37 @@ class UR5e(Robot):
 
         for i in range(len(joint_position)):
             obs_dict[f"joint_{i+1}.pos"] = joint_position[i]
-            obs_dict[f"joint_{i+1}.vel"] = joint_velocity[i]
-            obs_dict[f"joint_{i+1}.acc"] = joint_acceleration[i]
-            obs_dict[f"joint_{i+1}.force"] = joint_force[i]
-
-        for i, axis in enumerate(["x", "y", "z", "rx", "ry", "rz"]):
-            obs_dict[f"tcp_pose.{axis}"] = observation_tcp_pose[i]
-            obs_dict[f"tcp_speed.{axis}"] = tcp_speed[i]
-            if i < 3:
-                obs_dict[f"tcp_acc.{axis}"] = tcp_acceleration[i]
-            obs_dict[f"tcp_force.{axis}"] = tcp_force[i]
 
         if self.config.use_gripper:
             gripper_pos = self._gripper.pos if self._gripper.pos is not None else self._last_gripper_position
             obs_dict["gripper_raw_position"] = gripper_pos
-            obs_dict["gripper_action_bin"] = self._last_gripper_position
             obs_dict["gripper_raw_bin"] = 0 if gripper_pos <= self.config.gripper_bin_threshold else 1
+            obs_dict["gripper_action_bin"] = self._last_gripper_position
+        else:
+            obs_dict["gripper_raw_position"] = 0.0
+            obs_dict["gripper_raw_bin"] = 0.0
+            obs_dict["gripper_action_bin"] = 0.0
+
+        axes = ["x", "y", "z", "rx", "ry", "rz"]
+        for i, axis in enumerate(axes):
+            obs_dict[f"tcp_pose.{axis}"] = observation_tcp_pose[i]
+
+        for i, axis in enumerate(axes):
+            obs_dict[f"tcp_speed.{axis}"] = tcp_speed[i]
+
+        for i, axis in enumerate(["x", "y", "z"]):
+            obs_dict[f"tcp_force.{axis}"] = tcp_force[i]
+
+        for i, axis in enumerate(["rx", "ry", "rz"], start=3):
+            obs_dict[f"tcp_force.{axis}"] = tcp_force[i]
+
+        for i in range(len(joint_position)):
+            obs_dict[f"joint_{i+1}.vel"] = joint_velocity[i]
+            obs_dict[f"joint_{i+1}.acc"] = joint_acceleration[i]
+            obs_dict[f"joint_{i+1}.force"] = joint_force[i]
+
+        for i, axis in enumerate(["x", "y", "z"]):
+            obs_dict[f"tcp_acc.{axis}"] = tcp_acceleration[i]
 
         # Capture images from cameras
         for cam_key, cam in self.cameras.items():

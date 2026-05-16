@@ -208,7 +208,7 @@ class UR5eTeleop(KeyboardTeleop):
         if self.robot is None:
             raise ValueError("TCP reference frame requires a robot object on teleop.")
 
-        current_transform = self._pose_to_matrix(self.robot._arm["rtde_r"].getActualTCPPose())
+        current_transform = self._pose_to_matrix(self.robot.get_ee_pose())
         current_rotation = current_transform[:3, :3]
         delta_position_base = np.array(
             [action_values["delta_x"], action_values["delta_y"], action_values["delta_z"]],
