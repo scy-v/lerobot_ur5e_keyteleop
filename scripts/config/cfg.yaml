@@ -10,9 +10,11 @@ record:
     gripper_bin_threshold: 0.98 # threshold to determine gripper is closed
     gripper_port: &gripper_port "/dev/ur5e_left_gripper" # gripper_port
     gripper_reverse: &gripper_reverse False # If gripper moves opposite, flip this value
+    gripper_force: &gripper_force 70 # gripper force command
+    gripper_speed: &gripper_speed 60 # gripper speed command
     debug: False # if True, robot will not execute arm actions, but gripper can still be controlled
     control_space: "force" # "position" or "force"
-    reference_frame: "tcp" # "base" or "tcp"; base logs absolute tcp_pose, tcp logs episode-relative tcp_pose
+    reference_frame: "base" # "base" or "tcp"; base logs absolute tcp_pose, tcp logs episode-relative tcp_pose
     init_pose: [0.614137, -0.074413, 0.122977, 2.126091, -2.270512, -0.030781] # robot reset TCP pose [x, y, z, rx, ry, rz]
     init_pos_range: [0.02, 0.02, 0.02] # max random range for reset TCP position [x, y, z]
     force_mode:
@@ -27,8 +29,8 @@ record:
       vel_delta: 4.0                                                                                                                                                                                                                                                                                                                                                                                    
       gain_scale: 1.5
     position_mode:
-      speed: 0.3 # not used in servoL, only used in reset
-      acceleration: 0.3 # not used in servoL, only used in reset
+      speed: 0.1 # not used in servoL, only used in reset
+      acceleration: 0.1 # not used in servoL, only used in reset
       servo_time: 0.1
       lookahead_time: 0.1
       gain: 300
@@ -37,8 +39,10 @@ record:
       cog: [0.011, -0.002, 0.052]
 
   teleop:
-    step_size: 0.048 # keyboard xyz target delta
-    rot_step_size: 0.05 # keyboard euler angle target delta [rx, ry, rz]
+    position_step_size: 0.006 # keyboard xyz target delta for position control
+    force_step_size: 0.048 # keyboard xyz target delta for force control
+    position_rot_step_size: 0.02 # keyboard euler angle target delta for position control [rx, ry, rz]
+    force_rot_step_size: 0.05 # keyboard euler angle target delta for force control [rx, ry, rz]
 
   task:
     description: "Pick up the red cube and place it on the blue cube." # task description
@@ -55,8 +59,8 @@ record:
   cameras:
     wrist_cam_serial: "944622073455" # wrist camera serial number
     exterior_cam_serial: "213522072373" # exterior camera serial number
-    width: 424 # 640 424
-    height: 240 # 360 240
+    width: 640 # 640 424
+    height: 480 # 360 240
 
   storage:
     push_to_hub: False # whether to push the dataset to your huggingface repo after recording
@@ -69,9 +73,11 @@ replay:
     gripper_port: *gripper_port
     use_gripper: *use_gripper
     gripper_reverse: *gripper_reverse
+    gripper_force: *gripper_force
+    gripper_speed: *gripper_speed
 
 visualize:
-  dataset_name: scylearning/test_20260516_v01
+  dataset_name: scylearning/test_20260516_v06
   episode_index: 0 # episode index to visualize
   default_obs_group: "tcp_pose" # default observation group shown in the data window
   data_window: True # open a local browser window for per-frame action and selected observation data

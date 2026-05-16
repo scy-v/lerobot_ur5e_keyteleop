@@ -86,8 +86,10 @@ Key robot fields:
   - `tcp`: action delta is expressed in the current TCP frame, and `tcp_pose` observation is relative to the episode reference pose.
 - `init_pose`: reset TCP pose `[x, y, z, rx, ry, rz]`.
 - `init_pos_range`: random reset position range for `[x, y, z]`.
-- `teleop.step_size`: keyboard translation delta.
-- `teleop.rot_step_size`: keyboard Euler-angle delta.
+- `teleop.position_step_size`: keyboard translation delta for position control.
+- `teleop.force_step_size`: keyboard translation delta for force control.
+- `teleop.position_rot_step_size`: keyboard Euler-angle delta for position control.
+- `teleop.force_rot_step_size`: keyboard Euler-angle delta for force control.
 
 ## 3. Dataset Recording
 

@@ -30,7 +30,8 @@ class UR5e(Robot):
         self._gripper = None
         self._initial_pose = None
         self._prev_observation = None
-        self._gripper_force = 20
+        self._gripper_force = config.gripper_force
+        self._gripper_speed = config.gripper_speed
         self._gripper_position = 1.0
         self._last_gripper_position = 1.0
         self._episode_reference_tcp_pose = None
@@ -79,6 +80,8 @@ class UR5e(Robot):
         gripper = PGE(port)
         gripper.init_feedback()
         gripper.set_force(self._gripper_force)
+        gripper.set_vel(self._gripper_speed)
+        print(f"[GRIPPER] Force: {self._gripper_force}, speed: {self._gripper_speed}")
         print("[GRIPPER] Gripper initialized successfully.\n")
         return gripper
 

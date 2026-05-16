@@ -86,8 +86,10 @@ map_gripper.sh ur5e_left_gripper
   - `tcp`：action 增量在当前 TCP 坐标系下表达，`tcp_pose` 观测为相对 episode 参考位姿的变化量。
 - `init_pose`：复位 TCP 位姿 `[x, y, z, rx, ry, rz]`。
 - `init_pos_range`：复位位置 `[x, y, z]` 的随机范围。
-- `teleop.step_size`：键盘平移增量。
-- `teleop.rot_step_size`：键盘欧拉角增量。
+- `teleop.position_step_size`：position 控制下的键盘平移增量。
+- `teleop.force_step_size`：force 控制下的键盘平移增量。
+- `teleop.position_rot_step_size`：position 控制下的键盘欧拉角增量。
+- `teleop.force_rot_step_size`：force 控制下的键盘欧拉角增量。
 
 ## 3. 数据集记录
 

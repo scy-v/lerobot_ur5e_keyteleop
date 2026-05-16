@@ -12,22 +12,29 @@ def get_vel(gripper):
     )
 
 
-def load_gripper_port() -> str:
+def load_gripper_config() -> tuple[str, int, int]:
     parent_path = Path(__file__).resolve().parent
     cfg_path = parent_path.parent / "config" / "cfg.yaml"
     with open(cfg_path, "r") as f:
         cfg = yaml.safe_load(f)
-    return cfg["record"]["robot"]["gripper_port"]
+    robot_cfg = cfg["record"]["robot"]
+    return (
+        robot_cfg["gripper_port"],
+        robot_cfg.get("gripper_force", 70),
+        robot_cfg.get("gripper_speed", 60),
+    )
 
 
 def main():
-    gripper_port = load_gripper_port()
+    gripper_port, gripper_force, gripper_speed = load_gripper_config()
     print(f"Connecting to gripper at {gripper_port}...")
 
     gripper = PGE(gripper_port)
     gripper.init_feedback()
-    gripper.set_force(100)
-    gripper.set_vel(100)
+    gripper.set_force(gripper_force)
+    gripper.set_vel(gripper_speed)
+    print(f"Configured gripper force: {gripper_force}")
+    print(f"Configured gripper speed: {gripper_speed}")
     print(f"Gripper velocity: {get_vel(gripper)}")
     print("Enter a target position from 0 to 1000. Press Ctrl+C to exit.")
 

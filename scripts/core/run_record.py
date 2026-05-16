@@ -46,6 +46,8 @@ class RecordConfig:
         self.close_threshold: float = robot.get("close_threshold", 0.7)
         self.gripper_reverse: bool = robot.get("gripper_reverse", False)
         self.gripper_bin_threshold: float = robot.get("gripper_bin_threshold", 0.98)
+        self.gripper_force: int = robot.get("gripper_force", 70)
+        self.gripper_speed: int = robot.get("gripper_speed", 60)
         self.control_space: str = robot.get("control_space", "position")
         self.reference_frame: str = robot.get("reference_frame", "base")
         self.debug: bool = robot.get("debug", False)
@@ -70,8 +72,18 @@ class RecordConfig:
         self.init_pos_range: list[float] = robot.get("init_pos_range", [0.0, 0.0, 0.0])
 
         # teleop config
-        self.teleop_step_size: float = teleop.get("step_size", 0.048)
-        self.teleop_rot_step_size: float = teleop.get("rot_step_size", 0.05)
+        self.teleop_position_step_size: float = teleop.get("position_step_size", teleop.get("step_size", 0.01))
+        self.teleop_force_step_size: float = teleop.get("force_step_size", teleop.get("step_size", 0.048))
+        self.teleop_position_rot_step_size: float = teleop.get("position_rot_step_size", teleop.get("rot_step_size", 0.02))
+        self.teleop_force_rot_step_size: float = teleop.get("force_rot_step_size", teleop.get("rot_step_size", 0.05))
+        if self.control_space == "position":
+            self.teleop_step_size: float = self.teleop_position_step_size
+            self.teleop_rot_step_size: float = self.teleop_position_rot_step_size
+        elif self.control_space == "force":
+            self.teleop_step_size: float = self.teleop_force_step_size
+            self.teleop_rot_step_size: float = self.teleop_force_rot_step_size
+        else:
+            raise ValueError(f"Unsupported control_space: {self.control_space}")
 
         # task config
         self.num_episodes: int = task.get("num_episodes", 1)
@@ -159,6 +171,8 @@ def run_record(record_cfg: RecordConfig):
             close_threshold=record_cfg.close_threshold,
             gripper_reverse=record_cfg.gripper_reverse,
             gripper_bin_threshold=record_cfg.gripper_bin_threshold,
+            gripper_force=record_cfg.gripper_force,
+            gripper_speed=record_cfg.gripper_speed,
             control_space=record_cfg.control_space,
             debug=record_cfg.debug,
             kp=record_cfg.kp,
