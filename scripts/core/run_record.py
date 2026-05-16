@@ -129,6 +129,39 @@ def wait_for_enter(prompt: str) -> None:
         logging.info("====== [WARNING] Please press only Enter to continue ======")
 
 
+def reset_to_init_pose(
+    record_cfg: RecordConfig,
+    robot: UR5e,
+    teleop: UR5eTeleop,
+    events: dict,
+    teleop_action_processor,
+    robot_action_processor,
+    robot_observation_processor,
+) -> None:
+    logging.info("====== [RESET] Use keyboard teleoperation to move the robot to a safe pre-reset pose ======")
+    logging.info("====== [RESET] Press the right arrow key to finish manual reset control ======")
+    record_loop(
+        robot=robot,
+        events=events,
+        fps=record_cfg.fps,
+        teleop=teleop,
+        teleop_action_processor=teleop_action_processor,
+        robot_action_processor=robot_action_processor,
+        robot_observation_processor=robot_observation_processor,
+        control_time_s=record_cfg.reset_time_sec,
+        single_task=record_cfg.task_description,
+        display_data=record_cfg.display,
+    )
+
+    events["exit_early"] = False
+    events["rerecord_episode"] = False
+    if events["stop_recording"]:
+        return
+
+    logging.info("====== [RESET] Automatically resetting to configured initial TCP pose ======")
+    robot.reset_to_init_pose(record_cfg.init_pose, record_cfg.init_pos_range)
+
+
 def run_record(record_cfg: RecordConfig):
     robot = None
     teleop = None
@@ -261,7 +294,15 @@ def run_record(record_cfg: RecordConfig):
                 events["rerecord_episode"] = False
                 events["exit_early"] = False
                 dataset.clear_episode_buffer()
-                robot.reset_to_init_pose(record_cfg.init_pose, record_cfg.init_pos_range)
+                reset_to_init_pose(
+                    record_cfg,
+                    robot,
+                    teleop,
+                    events,
+                    teleop_action_processor,
+                    robot_action_processor,
+                    robot_observation_processor,
+                )
                 continue
             robot.stop_force()
             dataset.save_episode()
@@ -269,9 +310,17 @@ def run_record(record_cfg: RecordConfig):
             # Reset the environment if not stopping or re-recording
             if not events["stop_recording"] and (episode_idx < record_cfg.num_episodes - 1 or events["rerecord_episode"]):
                 wait_for_enter("====== [WAIT] Press Enter to reset the robot ======")
-                logging.info("====== [RESET] Resetting the environment ======")
-                robot.reset_to_init_pose(record_cfg.init_pose, record_cfg.init_pos_range)
-                wait_for_enter("====== [WAIT] Press Enter to start the next episode ======")
+                reset_to_init_pose(
+                    record_cfg,
+                    robot,
+                    teleop,
+                    events,
+                    teleop_action_processor,
+                    robot_action_processor,
+                    robot_observation_processor,
+                )
+                if not events["stop_recording"]:
+                    wait_for_enter("====== [WAIT] Press Enter to start the next episode ======")
 
             episode_idx += 1
 

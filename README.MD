@@ -182,8 +182,9 @@ tools-prune-dataset "[id1,...,idN]"
 ### 9.1 Episode Control Keys
 1. **Right Arrow Key**
    1. Press the right arrow key: end the current episode and save the data. The program will pause.
-   2. Enter the **reset** phase: press Enter to reset the robot to the configured initial TCP pose.
-   3. Press the right arrow key again to start recording the next episode.
+   2. Press Enter to enter the **reset** phase. Use keyboard teleoperation to move the robot back to a safe pre-reset pose.
+   3. Press the right arrow key to finish manual reset control. The robot will then automatically reset to the configured initial TCP pose.
+   4. Press Enter to start recording the next episode.
 
 2. **Left Arrow Key**
    - Press to restart the current episode recording and overwrite the current episode buffer.
