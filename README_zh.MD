@@ -140,10 +140,17 @@ ur5e-replay # 注意 cfg 配置
 ur5e-visualize # 注意 cfg 配置
 ```
 
-| 可视化 | Episode 数据窗口 |
-|:------:|:----------------:|
-| <img src="assets/visualize.png" alt="Visualization" width="460"> | <img src="assets/episode_data.png" alt="Episode Data" width="460"> |
-| **Figure 2: Visualization** | **Figure 3: Episode Data Window** |
+<p align="center">
+  <img src="assets/episode_data.png" alt="Episode Data" width="600">
+  <br>
+  <b>Figure 2: Episode 数据窗口</b>
+</p>
+
+<p align="center">
+  <img src="assets/visualize.png" alt="Visualization" width="600">
+  <br>
+  <b>Figure 3: 可视化</b>
+</p>
 
 Episode 数据窗口会显示每一帧的完整 action，并支持选择单个 observation 组进行查看，例如 `tcp_pose`、`tcp_force` 或各关节状态。
 
@@ -193,7 +200,7 @@ tools-prune-dataset "[id1,...,idN]"
    - 按下后：退出整个录制任务，并保存当前已录制的数据。
 
 4. **Ctrl+C 或抛出异常**
-   - 按下或发生异常时：自动进入异常处理阶段，提示用户是否删除当前未完成的录制数据。
+   - 按下或发生异常时：自动进入异常处理阶段，提示用户是否将当前未完成的数据集移动到回收站。
 
 ### 9.2 键盘遥操作按键
 | 按键 | 动作 |
@@ -225,7 +232,7 @@ tools-prune-dataset "[id1,...,idN]"
 
 1. 数据集默认保存在 `~/.cache/huggingface/lerobot` 目录下，包含三类内容：
 
-   - `dataset_info.txt`：自动记录本地数据集信息，包括以下字段：`record_id`、`name`、`task`、`date`、`version`、`user_info` 和 `type`。其中，`user_info` 可以通过 `cfg.yaml` 中的 `user_notes` 进行注解。
+   - `dataset_info.txt`：自动记录本地数据集信息，包括以下字段：`record_id`、`name`、`task`、`date`、`version`、`user_info` 和 `type`。其中，`user_info` 可以通过 `cfg.yaml` 中的 `user_notes` 进行注解；录制结束后，`user_info` 会自动追加本次运行的 `record_time`、`reset_time`、`total_time`、`avg_record_time` 和 `avg_reset_time`。
 
    - `dataset_info_backup`：当通过 `tools-check-dataset` 手动更新 `dataset_info.txt` 时，保存旧的记录备份。
 

@@ -436,7 +436,7 @@ class UR5e(Robot):
             init_pos_range if init_pos_range is not None else self.config.init_pos_range,
         )
 
-        logger.info(f"Resetting to initial TCP pose: {target_pose}")
+        logger.info("Resetting to initial TCP pose.")
         if self.config.debug:
             logger.info("Debug mode is enabled; skip robot reset motion.")
             return

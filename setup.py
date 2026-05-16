@@ -20,6 +20,7 @@ setup(
         "numpy",
         "pydhgripper",
         "pyrealsense2",
+        "send2trash",
         "scipy",
         "ur-rtde",
     ],

@@ -32,8 +32,8 @@ record:
       vel_delta: 4.0                                                                                                                                                                                                                                                                                                                                                                                    
       gain_scale: 1.5
     position_mode:
-      speed: 0.1 # not used in servoL, only used in reset
-      acceleration: 0.1 # not used in servoL, only used in reset
+      speed: 0.2 # not used in servoL, only used in reset
+      acceleration: 0.2 # not used in servoL, only used in reset
       servo_time: 0.1
       lookahead_time: 0.1
       gain: 300
@@ -49,10 +49,10 @@ record:
 
   task:
     description: "Insert the reagent bottle into the rack" # task description
-    num_episodes: 150 # number of episodes to record
+    num_episodes: 73 # number of episodes to record
     display: True # Whether to display the data during recording
-    resume: False
-    resume_dataset: scylearning/test_20260515_v01 # dataset to resume from if resume is True
+    resume: True
+    resume_dataset: scylearning/insert_reagent_bottle_into_rack_20260516_v01 # dataset to resume from if resume is True
     
   time:
     episode_time_sec: 600 # max time per episode in seconds
@@ -81,7 +81,7 @@ replay:
 
 visualize:
   dataset_name: scylearning/insert_reagent_bottle_into_rack_20260516_v01
-  episode_index: 0 # episode index to visualize
+  episode_index: 149 # episode index to visualize
   default_obs_group: "tcp_pose" # default observation group shown in the data window
   data_window: True # open a local browser window for per-frame action and selected observation data
   print_to_terminal: False # also print per-frame data to terminal

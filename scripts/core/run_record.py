@@ -10,9 +10,10 @@ from lerobot.scripts.lerobot_record import record_loop
 from lerobot.processor import make_default_processors
 from lerobot.utils.visualization_utils import init_rerun
 from lerobot.utils.control_utils import init_keyboard_listener
-import shutil
+from send2trash import send2trash
 import termios
 import sys
+import time as time_module
 from lerobot.utils.constants import HF_LEROBOT_HOME
 from lerobot.datasets.lerobot_dataset import LeRobotDataset
 from lerobot.datasets.utils import hw_to_dataset_features
@@ -107,17 +108,83 @@ class RecordConfig:
         self.push_to_hub: bool = storage.get("push_to_hub", False)
 
 
-def handle_incomplete_dataset(dataset_path):
+def handle_incomplete_dataset(dataset_path) -> bool:
     if dataset_path.exists():
         print(f"====== [WARNING] Detected an incomplete dataset folder: {dataset_path} ======")
         termios.tcflush(sys.stdin, termios.TCIFLUSH)
         ans = input("Do you want to delete it? (y/n): ").strip().lower()
         if ans == "y":
-            print(f"====== [DELETE] Removing folder: {dataset_path} ======")
-            shutil.rmtree(dataset_path, ignore_errors=True)
-            print("====== [DONE] Incomplete dataset folder deleted successfully. ======")
+            print(f"====== [TRASH] Moving folder to trash: {dataset_path} ======")
+            send2trash(str(dataset_path))
+            print("====== [DONE] Incomplete dataset folder moved to trash successfully. ======")
+            return False
         else:
             print("====== [KEEP] Incomplete dataset folder retained, please check manually. ======")
+            return True
+    return False
+
+
+def format_duration(seconds: float) -> str:
+    total_seconds = max(0, int(round(seconds)))
+    hours, remainder = divmod(total_seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    if hours:
+        return f"{hours}h {minutes}m {seconds}s"
+    if minutes:
+        return f"{minutes}m {seconds}s"
+    return f"{seconds}s"
+
+
+def append_record_times(
+    record_cfg: RecordConfig,
+    record_time: str,
+    reset_time: str,
+    total_time: str,
+    avg_record_time: str,
+    avg_reset_time: str,
+) -> None:
+    duration_info = (
+        f"record_time={record_time}, reset_time={reset_time}, total_time={total_time}, "
+        f"avg_record_time={avg_record_time}, avg_reset_time={avg_reset_time}"
+    )
+    if record_cfg.user_info:
+        if duration_info not in str(record_cfg.user_info):
+            record_cfg.user_info = f"{record_cfg.user_info}; {duration_info}"
+    else:
+        record_cfg.user_info = duration_info
+
+
+def get_episode_buffer_size(dataset: LeRobotDataset | None) -> int:
+    if dataset is None:
+        return 0
+    episode_buffer = getattr(dataset, "episode_buffer", None)
+    if not episode_buffer:
+        return 0
+    return int(episode_buffer.get("size", 0))
+
+
+def discard_unsaved_episode(dataset: LeRobotDataset | None) -> None:
+    if dataset is None:
+        return
+
+    if get_episode_buffer_size(dataset) <= 0:
+        return
+
+    try:
+        dataset.clear_episode_buffer(delete_images=len(dataset.meta.image_keys) > 0)
+        logging.info("====== [INFO] Discarded unsaved episode buffer. ======")
+    except Exception as cleanup_error:
+        logging.info(f"====== [WARNING] Failed to discard unsaved episode buffer: {cleanup_error} ======")
+
+
+def finalize_dataset_safely(dataset: LeRobotDataset | None) -> None:
+    if dataset is None:
+        return
+
+    try:
+        dataset.finalize()
+    except Exception as finalize_error:
+        logging.info(f"====== [WARNING] Failed to finalize dataset cleanly: {finalize_error} ======")
 
 
 def wait_for_enter(prompt: str) -> None:
@@ -139,7 +206,7 @@ def reset_to_init_pose(
     robot_observation_processor,
 ) -> None:
     logging.info("====== [RESET] Use keyboard teleoperation to move the robot to a safe pre-reset pose ======")
-    logging.info("====== [RESET] Press the right arrow key to finish manual reset control ======")
+    logging.info("\033[32m====== [RESET] Press the right arrow key to finish manual reset control ======\033[0m")
     record_loop(
         robot=robot,
         events=events,
@@ -167,6 +234,11 @@ def run_record(record_cfg: RecordConfig):
     teleop = None
     dataset = None
     dataset_name = None
+    data_version = None
+    record_start_time = None
+    record_loop_time_s = 0.0
+    record_loop_count = 0
+    dataset_info_updated = False
 
     try:
         dataset_name, data_version = generate_dataset_name(record_cfg)
@@ -272,22 +344,30 @@ def run_record(record_cfg: RecordConfig):
         teleop.connect()
 
         episode_idx = 0
+        record_start_time = time_module.perf_counter()
         while episode_idx < record_cfg.num_episodes and not events["stop_recording"]:
+            events["exit_early"] = False
+            events["rerecord_episode"] = False
             robot.set_episode_reference_pose()
             logging.info(f"====== [RECORD] Recording episode {episode_idx + 1} of {record_cfg.num_episodes} ======")
-            record_loop(
-                robot=robot,
-                events=events,
-                fps=record_cfg.fps,
-                teleop=teleop,
-                teleop_action_processor=teleop_action_processor,
-                robot_action_processor=robot_action_processor,
-                robot_observation_processor=robot_observation_processor,
-                dataset=dataset,
-                control_time_s=record_cfg.episode_time_sec,
-                single_task=record_cfg.task_description,
-                display_data=record_cfg.display,
-            )
+            episode_record_start = time_module.perf_counter()
+            try:
+                record_loop(
+                    robot=robot,
+                    events=events,
+                    fps=record_cfg.fps,
+                    teleop=teleop,
+                    teleop_action_processor=teleop_action_processor,
+                    robot_action_processor=robot_action_processor,
+                    robot_observation_processor=robot_observation_processor,
+                    dataset=dataset,
+                    control_time_s=record_cfg.episode_time_sec,
+                    single_task=record_cfg.task_description,
+                    display_data=record_cfg.display,
+                )
+            finally:
+                record_loop_time_s += time_module.perf_counter() - episode_record_start
+                record_loop_count += 1
 
             if events["rerecord_episode"]:
                 logging.info("Re-recording episode")
@@ -305,6 +385,15 @@ def run_record(record_cfg: RecordConfig):
                 )
                 continue
             robot.stop_force()
+
+            if get_episode_buffer_size(dataset) <= 0:
+                logging.info("====== [WARNING] No frames were recorded for this episode; skipping save. ======")
+                events["exit_early"] = False
+                events["rerecord_episode"] = False
+                if events["stop_recording"]:
+                    break
+                continue
+
             dataset.save_episode()
 
             # Reset the environment if not stopping or re-recording
@@ -330,19 +419,67 @@ def run_record(record_cfg: RecordConfig):
         teleop.disconnect()
         dataset.finalize()
 
+        total_time_s = time_module.perf_counter() - record_start_time
+        reset_time_s = max(0.0, total_time_s - record_loop_time_s)
+        record_duration = format_duration(record_loop_time_s)
+        reset_duration = format_duration(reset_time_s)
+        total_duration = format_duration(total_time_s)
+        avg_denominator = max(record_loop_count, 1)
+        avg_record_duration = format_duration(record_loop_time_s / avg_denominator)
+        avg_reset_duration = format_duration(reset_time_s / avg_denominator)
+        logging.info(f"====== [INFO] Record loop time: {record_duration} ======")
+        logging.info(f"====== [INFO] Reset/non-record time: {reset_duration} ======")
+        logging.info(f"====== [INFO] Total recording time: {total_duration} ======")
+        logging.info(f"====== [INFO] Average record loop time: {avg_record_duration} ======")
+        logging.info(f"====== [INFO] Average reset/non-record time: {avg_reset_duration} ======")
+        append_record_times(
+            record_cfg,
+            record_duration,
+            reset_duration,
+            total_duration,
+            avg_record_duration,
+            avg_reset_duration,
+        )
         update_dataset_info(record_cfg, dataset_name, data_version)
+        dataset_info_updated = True
         if record_cfg.push_to_hub:
             dataset.push_to_hub()
 
     except (Exception, KeyboardInterrupt) as e:
         logging.info(f"====== [ERROR] {e} ======" if isinstance(e, Exception) else "\n====== [INFO] Ctrl+C detected ======")
+        if record_start_time is not None:
+            total_time_s = time_module.perf_counter() - record_start_time
+            reset_time_s = max(0.0, total_time_s - record_loop_time_s)
+            record_duration = format_duration(record_loop_time_s)
+            reset_duration = format_duration(reset_time_s)
+            total_duration = format_duration(total_time_s)
+            avg_denominator = max(record_loop_count, 1)
+            avg_record_duration = format_duration(record_loop_time_s / avg_denominator)
+            avg_reset_duration = format_duration(reset_time_s / avg_denominator)
+            logging.info(f"====== [INFO] Record loop time: {record_duration} ======")
+            logging.info(f"====== [INFO] Reset/non-record time: {reset_duration} ======")
+            logging.info(f"====== [INFO] Total recording time: {total_duration} ======")
+            logging.info(f"====== [INFO] Average record loop time: {avg_record_duration} ======")
+            logging.info(f"====== [INFO] Average reset/non-record time: {avg_reset_duration} ======")
+            append_record_times(
+                record_cfg,
+                record_duration,
+                reset_duration,
+                total_duration,
+                avg_record_duration,
+                avg_reset_duration,
+            )
         if robot is not None:
             robot.disconnect()
         if teleop is not None:
             teleop.disconnect()
+        discard_unsaved_episode(dataset)
+        finalize_dataset_safely(dataset)
         if dataset_name is not None:
             dataset_path = Path(HF_LEROBOT_HOME) / dataset_name
-            handle_incomplete_dataset(dataset_path)
+            keep_dataset = handle_incomplete_dataset(dataset_path)
+            if keep_dataset and data_version is not None and not dataset_info_updated:
+                update_dataset_info(record_cfg, dataset_name, data_version)
 
 def main():
     with open(Path(__file__).parents[1] / "config" / "cfg.yaml", 'r') as f:

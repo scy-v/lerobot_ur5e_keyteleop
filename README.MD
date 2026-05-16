@@ -140,10 +140,17 @@ ur5e-replay # Make sure cfg.yaml is properly configured
 ur5e-visualize # Make sure cfg.yaml is properly configured
 ```
 
-| Visualization | Episode Data |
-|:-------------:|:------------:|
-| <img src="assets/visualize.png" alt="Visualization" width="460"> | <img src="assets/episode_data.png" alt="Episode Data" width="460"> |
-| **Figure 2: Visualization** | **Figure 3: Episode Data Window** |
+<p align="center">
+  <img src="assets/episode_data.png" alt="Episode Data" width="600">
+  <br>
+  <b>Figure 2: Episode Data Window</b>
+</p>
+
+<p align="center">
+  <img src="assets/visualize.png" alt="Visualization" width="600">
+  <br>
+  <b>Figure 3: Visualization</b>
+</p>
 
 The data window shows the action for each frame and lets you select one observation group at a time, such as `tcp_pose`, `tcp_force`, or joint states.
 
@@ -193,7 +200,7 @@ tools-prune-dataset "[id1,...,idN]"
    - Press to exit the recording session and save all recorded episodes.
 
 4. **Ctrl+C or Exception**
-   - Pressing Ctrl+C or encountering an exception enters exception handling and asks whether to delete the incomplete dataset.
+   - Pressing Ctrl+C or encountering an exception enters exception handling and asks whether to move the incomplete dataset to trash.
 
 ### 9.2 Keyboard Teleoperation Keys
 | Key | Action |
@@ -225,7 +232,7 @@ tools-prune-dataset "[id1,...,idN]"
 
 1. The dataset is by default stored in the `~/.cache/huggingface/lerobot` directory and contains three types of items:
 
-   - `dataset_info.txt`: Automatically records local dataset information, including the following fields: `record_id`, `name`, `task`, `date`, `version`, `user_info`, and `type`. The `user_info` field can be annotated via the `user_notes` entry in `cfg.yaml`.
+   - `dataset_info.txt`: Automatically records local dataset information, including the following fields: `record_id`, `name`, `task`, `date`, `version`, `user_info`, and `type`. The `user_info` field can be annotated via the `user_notes` entry in `cfg.yaml`; after recording, it is automatically appended with `record_time`, `reset_time`, `total_time`, `avg_record_time`, and `avg_reset_time` for the current run.
 
    - `dataset_info_backup`: When `tools-check-dataset` is used to manually update `dataset_info.txt`, this folder stores backups of the previous records.
 
