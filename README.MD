@@ -1,4 +1,4 @@
-# UR5/7e Keyboard Teleoperation Data Collection
+# UR5e/UR7e Keyboard Teleoperation Data Collection
 
 <p align="center">
   <img src="assets/robot.png" alt="Robot" width="600">
@@ -11,8 +11,8 @@
 
 | Repository | Description | GitHub Link |
 |:----------:|:------------|:-----------:|
-| **lerobot_ur5e_isoteleop** | Master-slave UR5/7e teleoperation with joint-level isomorphic mapping, built on LeRobot. | [GitHub](https://github.com/scy-v/lerobot_ur5e_isoteleop) |
-| **lerobot_ur_dual_vrteleop** | Dual-arm VR teleoperation for UR5/7e robots, built on LeRobot and PICO 4 Ultra. | [GitHub](https://github.com/scy-v/lerobot_ur_dual_vrteleop) |
+| **lerobot_ur5e_isoteleop** | Master-slave UR5e/UR7e teleoperation with joint-level isomorphic mapping, built on LeRobot. | [GitHub](https://github.com/scy-v/lerobot_ur5e_isoteleop) |
+| **lerobot_ur_dual_vrteleop** | Dual-arm VR teleoperation for UR5e/UR7e robots, built on LeRobot and PICO 4 Ultra. | [GitHub](https://github.com/scy-v/lerobot_ur_dual_vrteleop) |
 
 </div>
 

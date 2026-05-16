@@ -1,4 +1,4 @@
-# UR5/7e 键盘遥操作数据采集与回放指南
+# UR5e/UR7e 键盘遥操作数据采集与回放指南
 
 <p align="center">
   <img src="assets/robot.png" alt="Robot" width="600">
@@ -11,8 +11,8 @@
 
 | 仓库 | 功能 | 链接 |
 |:----:|:-----|:----:|
-| **lerobot_ur5e_isoteleop** | 基于 LeRobot 构建的 UR5/7e 主从臂遥操作框架，具有关节级同构映射。 | [GitHub](https://github.com/scy-v/lerobot_ur5e_isoteleop) |
-| **lerobot_ur_dual_vrteleop** | 基于 LeRobot 和 PICO 4 Ultra 构建的 UR5/7e 双臂 VR 遥操作框架。 | [GitHub](https://github.com/scy-v/lerobot_ur_dual_vrteleop) |
+| **lerobot_ur5e_isoteleop** | 基于 LeRobot 构建的 UR5e/UR7e 主从臂遥操作框架，具有关节级同构映射。 | [GitHub](https://github.com/scy-v/lerobot_ur5e_isoteleop) |
+| **lerobot_ur_dual_vrteleop** | 基于 LeRobot 和 PICO 4 Ultra 构建的 UR5e/UR7e 双臂 VR 遥操作框架。 | [GitHub](https://github.com/scy-v/lerobot_ur_dual_vrteleop) |
 
 </div>
 
