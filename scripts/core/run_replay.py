@@ -19,7 +19,7 @@ class ReplayConfig:
         self.robot_ip: str = robot["ip"]
         self.gripper_port: str = robot["gripper_port"]
 
-def main(replay_cfg: ReplayConfig):
+def run_replay(replay_cfg: ReplayConfig):
     episode_idx = replay_cfg.episode_idx
 
     robot_config = UR5eConfig(
@@ -27,7 +27,7 @@ def main(replay_cfg: ReplayConfig):
         gripper_port=replay_cfg.gripper_port,
     )
 
-    robot = robot = UR5e(robot_config)
+    robot = UR5e(robot_config)
     robot.connect()
     dataset = LeRobotDataset(replay_cfg.repo_id, episodes=[episode_idx])
     actions = dataset.hf_dataset.select_columns("action")
@@ -44,10 +44,13 @@ def main(replay_cfg: ReplayConfig):
 
     robot.disconnect()
 
-if __name__ == "__main__":
-    with open(Path(__file__).parent / "config" / "cfg.yaml", 'r') as f:
+def main():
+    with open(Path(__file__).parents[1] / "config" / "cfg.yaml", 'r') as f:
         cfg = yaml.safe_load(f)
 
     replay_cfg = ReplayConfig(cfg["replay"])
+    run_replay(replay_cfg)
 
-    main(replay_cfg)
+
+if __name__ == "__main__":
+    main()

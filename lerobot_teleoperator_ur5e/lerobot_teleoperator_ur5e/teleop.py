@@ -21,10 +21,12 @@ import time
 from queue import Queue
 from typing import Any
 
+import numpy as np
+from scipy.spatial.transform import Rotation as R
+
 from lerobot.utils.errors import DeviceAlreadyConnectedError, DeviceNotConnectedError
 
 from lerobot.teleoperators.teleoperator import Teleoperator
-from lerobot.teleoperators.utils import TeleopEvents
 from lerobot.teleoperators.keyboard.configuration_keyboard import KeyboardEndEffectorTeleopConfig, KeyboardTeleopConfig
 from .config_teleop import UR5eTeleopConfig
 PYNPUT_AVAILABLE = True
@@ -158,22 +160,76 @@ class UR5eTeleop(KeyboardTeleop):
     def __init__(self, config: UR5eTeleopConfig):
         super().__init__(config)
         self.config = config
-        self.misc_keys_queue = Queue()
+        self.step_size = config.step_size
+        self.rot_step_size = config.rot_step_size
+        self.reference_frame = config.reference_frame
+        self.robot = None
+        self.gripper_action = 1.0
+
+    def set_robot(self, robot) -> None:
+        self.robot = robot
+
+    def _pose_to_matrix(self, tcp_pose: list[float]) -> np.ndarray:
+        transform = np.eye(4)
+        transform[:3, :3] = R.from_rotvec(tcp_pose[3:]).as_matrix()
+        transform[:3, 3] = np.array(tcp_pose[:3], dtype=float)
+        return transform
 
     @property
     def action_features(self) -> dict:
         if self.config.use_gripper:
             return {
                 "dtype": "float32",
-                "shape": (4,),
-                "names": {"delta_x": 0, "delta_y": 1, "delta_z": 2, "gripper": 3},
+                "shape": (7,),
+                "names": {
+                    "delta_x": 0,
+                    "delta_y": 1,
+                    "delta_z": 2,
+                    "delta_rx": 3,
+                    "delta_ry": 4,
+                    "delta_rz": 5,
+                    "gripper_position": 6,
+                },
             }
         else:
             return {
                 "dtype": "float32",
-                "shape": (3,),
-                "names": {"delta_x": 0, "delta_y": 1, "delta_z": 2},
+                "shape": (6,),
+                "names": {"delta_x": 0, "delta_y": 1, "delta_z": 2, "delta_rx": 3, "delta_ry": 4, "delta_rz": 5},
             }
+
+    def _to_reference_delta(self, action_values: dict[str, float]) -> dict[str, float]:
+        if self.reference_frame == "base":
+            return action_values
+        if self.reference_frame != "tcp":
+            raise ValueError(f"Unsupported reference_frame: {self.reference_frame}")
+        if not any(abs(value) > 0.0 for value in action_values.values()):
+            return action_values
+        if self.robot is None:
+            raise ValueError("TCP reference frame requires a robot object on teleop.")
+
+        current_transform = self._pose_to_matrix(self.robot._arm["rtde_r"].getActualTCPPose())
+        current_rotation = current_transform[:3, :3]
+        delta_position_base = np.array(
+            [action_values["delta_x"], action_values["delta_y"], action_values["delta_z"]],
+            dtype=float,
+        )
+        delta_rotation_base = R.from_euler(
+            "xyz",
+            [action_values["delta_rx"], action_values["delta_ry"], action_values["delta_rz"]],
+        ).as_matrix()
+
+        delta_position_tcp = current_rotation.T @ delta_position_base
+        delta_rotation_tcp = current_rotation.T @ delta_rotation_base @ current_rotation
+        delta_euler_tcp = R.from_matrix(delta_rotation_tcp).as_euler("xyz")
+        return {
+            "delta_x": float(delta_position_tcp[0]),
+            "delta_y": float(delta_position_tcp[1]),
+            "delta_z": float(delta_position_tcp[2]),
+            "delta_rx": float(delta_euler_tcp[0]),
+            "delta_ry": float(delta_euler_tcp[1]),
+            "delta_rz": float(delta_euler_tcp[2]),
+        }
 
     def get_action(self) -> dict[str, Any]:
         if not self.is_connected:
@@ -182,106 +238,37 @@ class UR5eTeleop(KeyboardTeleop):
             )
 
         self._drain_pressed_keys()
-        delta_x = 0.0
-        delta_y = 0.0
-        delta_z = 0.0
-        gripper_action = 1.0
-        # Generate action based on current key states
-        for key, val in self.current_pressed.items():
-            if key == keyboard.KeyCode.from_char('w'):
-                delta_y = int(val) * 0.01       # W → y+
-            elif key == keyboard.KeyCode.from_char('s'):
-                delta_y = -int(val) * 0.01      # S → y-
-            elif key == keyboard.KeyCode.from_char('a'):
-                delta_x = -int(val) * 0.01      # A → x-
-            elif key == keyboard.KeyCode.from_char('d'):
-                delta_x = int(val) * 0.01       # D → x+
-            elif key == keyboard.KeyCode.from_char('q'): 
-                delta_z = int(val) * 0.01       # Q → top
-            elif key == keyboard.KeyCode.from_char('e'):
-                delta_z = -int(val) * 0.01      # E → bottom
-            elif key == keyboard.Key.ctrl_r:
-                gripper_action = 0              # Ctrl_r → open
-            elif key == keyboard.Key.ctrl_l:
-                gripper_action = 2              # Ctrl_l → close
-            elif val:
-                # If the key is pressed, add it to the misc_keys_queue
-                # this will record key presses that are not part of the delta_x, delta_y, delta_z
-                # this is useful for retrieving other events like interventions for RL, episode success, etc.
-                self.misc_keys_queue.put(key)
+        action_values = {axis: 0.0 for axis in ("delta_x", "delta_y", "delta_z", "delta_rx", "delta_ry", "delta_rz")}
 
-        self.current_pressed.clear()
-
-        action_dict = {
-            "delta_x": delta_x,
-            "delta_y": delta_y,
-            "delta_z": delta_z,
+        key_mapping = {
+            keyboard.KeyCode.from_char("s"): ("delta_x", 1.0, self.step_size),
+            keyboard.KeyCode.from_char("w"): ("delta_x", -1.0, self.step_size),
+            keyboard.KeyCode.from_char("d"): ("delta_y", 1.0, self.step_size),
+            keyboard.KeyCode.from_char("a"): ("delta_y", -1.0, self.step_size),
+            keyboard.KeyCode.from_char("q"): ("delta_z", 1.0, self.step_size),
+            keyboard.KeyCode.from_char("e"): ("delta_z", -1.0, self.step_size),
+            keyboard.KeyCode.from_char("r"): ("delta_rx", 1.0, self.rot_step_size),
+            keyboard.KeyCode.from_char("t"): ("delta_rx", -1.0, self.rot_step_size),
+            keyboard.KeyCode.from_char("g"): ("delta_ry", 1.0, self.rot_step_size),
+            keyboard.KeyCode.from_char("f"): ("delta_ry", -1.0, self.rot_step_size),
+            keyboard.KeyCode.from_char("b"): ("delta_rz", 1.0, self.rot_step_size),
+            keyboard.KeyCode.from_char("v"): ("delta_rz", -1.0, self.rot_step_size),
         }
+
+        # Generate action from sustained key states. This allows held keys and
+        # multi-axis combinations such as forward + left.
+        for key, val in self.current_pressed.items():
+            if key in key_mapping and val:
+                axis, sign, step = key_mapping[key]
+                action_values[axis] += sign * step
+            elif key == keyboard.KeyCode.from_char("o") and val:
+                self.gripper_action = 1         # O -> open, latched like conrft
+            elif key == keyboard.KeyCode.from_char("l") and val:
+                self.gripper_action = 0         # L -> close, latched like conrft
+
+        action_dict = self._to_reference_delta(action_values)
 
         if self.config.use_gripper:
-            action_dict["gripper_position"] = gripper_action
+            action_dict["gripper_position"] = self.gripper_action
 
         return action_dict
-
-    def get_teleop_events(self) -> dict[str, Any]:
-        """
-        Get extra control events from the keyboard such as intervention status,
-        episode termination, success indicators, etc.
-
-        Keyboard mappings:
-        - Any movement keys pressed = intervention active
-        - 's' key = success (terminate episode successfully)
-        - 'r' key = rerecord episode (terminate and rerecord)
-        - 'q' key = quit episode (terminate without success)
-
-        Returns:
-            Dictionary containing:
-                - is_intervention: bool - Whether human is currently intervening
-                - terminate_episode: bool - Whether to terminate the current episode
-                - success: bool - Whether the episode was successful
-                - rerecord_episode: bool - Whether to rerecord the episode
-        """
-        if not self.is_connected:
-            return {
-                TeleopEvents.IS_INTERVENTION: False,
-                TeleopEvents.TERMINATE_EPISODE: False,
-                TeleopEvents.SUCCESS: False,
-                TeleopEvents.RERECORD_EPISODE: False,
-            }
-
-        # Check if any movement keys are currently pressed (indicates intervention)
-        movement_keys = [
-            keyboard.Key.up,
-            keyboard.Key.down,
-            keyboard.Key.left,
-            keyboard.Key.right,
-            keyboard.Key.shift,
-            keyboard.Key.shift_r,
-            keyboard.Key.ctrl_r,
-            keyboard.Key.ctrl_l,
-        ]
-        is_intervention = any(self.current_pressed.get(key, False) for key in movement_keys)
-
-        # Check for episode control commands from misc_keys_queue
-        terminate_episode = False
-        success = False
-        rerecord_episode = False
-
-        # Process any pending misc keys
-        while not self.misc_keys_queue.empty():
-            key = self.misc_keys_queue.get_nowait()
-            if key == "s":
-                success = True
-            elif key == "r":
-                terminate_episode = True
-                rerecord_episode = True
-            elif key == "q":
-                terminate_episode = True
-                success = False
-
-        return {
-            TeleopEvents.IS_INTERVENTION: is_intervention,
-            TeleopEvents.TERMINATE_EPISODE: terminate_episode,
-            TeleopEvents.SUCCESS: success,
-            TeleopEvents.RERECORD_EPISODE: rerecord_episode,
-        }

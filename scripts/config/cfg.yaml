@@ -1,16 +1,51 @@
 record:
-  repo_id: &repo_id "scylearning/ur5e_keyboard" #huggingface repo: <hf_username>/<dataset_repo_id>
+  repo_id: &repo_id "scylearning/test" #huggingface repo: <hf_username>/<dataset_repo_id>
+  user_notes:  # any additional notes about the dataset
   fps: 15 # dataset and camera frame rate
 
   robot:
-    ip: &ip "192.168.131.11" # robot_ip
+    ip: &ip "192.168.201.11" # robot_ip
+    use_gripper: &use_gripper True
+    close_threshold: 0.7 # threshold to determine gripper open/close
+    gripper_bin_threshold: 0.98 # threshold to determine gripper is closed
     gripper_port: &gripper_port "/dev/ur5e_left_gripper" # gripper_port
+    gripper_reverse: &gripper_reverse False # If gripper moves opposite, flip this value
+    debug: False # if True, robot will not execute arm actions, but gripper can still be controlled
+    control_space: "force" # "position" or "force"
+    reference_frame: "tcp" # "base" or "tcp"; base logs absolute tcp_pose, tcp logs episode-relative tcp_pose
+    init_pose: [0.614137, -0.074413, 0.122977, 2.126091, -2.270512, -0.030781] # robot reset TCP pose [x, y, z, rx, ry, rz]
+    init_pos_range: [0.02, 0.02, 0.02] # max random range for reset TCP position [x, y, z]
+    force_mode:
+      kp: 1200
+      kd: 600
+      kp_rot: 2000
+      kd_rot: 400
+      rtde_freq: 100
+      select_vector: [1, 1, 1, 0, 0, 0]
+      force_limit: [2, 2, 2, 2, 2, 2]
+      pos_delta: 0.02
+      vel_delta: 4.0                                                                                                                                                                                                                                                                                                                                                                                    
+      gain_scale: 1.5
+    position_mode:
+      speed: 0.3 # not used in servoL, only used in reset
+      acceleration: 0.3 # not used in servoL, only used in reset
+      servo_time: 0.1
+      lookahead_time: 0.1
+      gain: 300
+    payload:
+      mass: 1.601
+      cog: [0.011, -0.002, 0.052]
+
+  teleop:
+    step_size: 0.048 # keyboard xyz target delta
+    rot_step_size: 0.05 # keyboard euler angle target delta [rx, ry, rz]
 
   task:
     description: "Pick up the red cube and place it on the blue cube." # task description
-    num_episodes: 1 # number of episodes to record
+    num_episodes: 10 # number of episodes to record
     display: True # Whether to display the data during recording
     resume: False
+    resume_dataset: scylearning/test_20260515_v01 # dataset to resume from if resume is True
     
   time:
     episode_time_sec: 60 # max time per episode in seconds
@@ -18,8 +53,10 @@ record:
     save_meta_period: 1 # Save metadata after every N episodes
 
   cameras:
-    wrist_cam_serial: "332322070928" # wrist camera serial number
-    exterior_cam_serial: "213522070689" # exterior camera serial number
+    wrist_cam_serial: "944622073455" # wrist camera serial number
+    exterior_cam_serial: "213522072373" # exterior camera serial number
+    width: 424 # 640 424
+    height: 240 # 360 240
 
   storage:
     push_to_hub: False # whether to push the dataset to your huggingface repo after recording
@@ -30,7 +67,19 @@ replay:
   robot:
     ip: *ip
     gripper_port: *gripper_port
+    use_gripper: *use_gripper
+    gripper_reverse: *gripper_reverse
 
 visualize:
-  repo_id: *repo_id
+  dataset_name: scylearning/test_20260516_v01
   episode_index: 0 # episode index to visualize
+  default_obs_group: "tcp_pose" # default observation group shown in the data window
+  data_window: True # open a local browser window for per-frame action and selected observation data
+  print_to_terminal: False # also print per-frame data to terminal
+
+check_dataset:
+  dataset_name: scylearning/test_20260516_v01
+
+prune_episodes:
+  old_dataset_name: scylearning/test_20260516_v01
+  new_dataset_name: scylearning/test_20260516_v01_pruned

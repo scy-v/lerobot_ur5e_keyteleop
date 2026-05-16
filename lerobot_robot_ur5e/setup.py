@@ -8,8 +8,10 @@ setup(
     author_email="suchenyu@mail.ustc.edu.cn",
     packages=find_packages(),
     install_requires=[
+        "numpy",
         "pydhgripper",
         "pyrealsense2",
+        "scipy",
         "ur-rtde",
     ],
     python_requires=">=3.10",
