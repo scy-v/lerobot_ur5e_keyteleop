@@ -14,9 +14,13 @@ Tool Commands:
   tools-check-info      Check local dataset information
   tools-check-rs        Retrieve connected RealSense camera serial numbers
   tools-prune-dataset   Prune episodes from dataset by Episode ID
+  tools-robot-state     Read and print robot state once
 
 Shell Tools:
-  map_gripper.sh    Map Gripper Serial Port
+  map_gripper.sh        Map Gripper Serial Port
+
+Test Commands:
+  test-gripper-ctrl     Run gripper control command
 
 --------------------------------------------------
  Tip: Use 'ur5e-help' anytime to see this summary.
