@@ -30,6 +30,7 @@ def read_robot_state(rtde_r: RTDEReceiveInterface, rtde_c: RTDEControlInterface)
         "joint_accelerations_rad_s2": rtde_r.getTargetQdd(),
         "joint_torques_nm": rtde_c.getJointTorques(),
         "tcp_pose_m_rad": rtde_r.getActualTCPPose(),
+        "tcp_offset_m_rad": rtde_c.getTCPOffset(),
         "tcp_speed_m_s_rad_s": rtde_r.getActualTCPSpeed(),
         "tcp_acceleration_m_s2": rtde_r.getActualToolAccelerometer(),
         "tcp_force_n_nm": rtde_r.getActualTCPForce(),
@@ -45,6 +46,7 @@ def print_robot_state(state: dict[str, Any]) -> None:
     logging.info(f"  Joint accelerations [rad/s^2]: {format_vector(state['joint_accelerations_rad_s2'])}")
     logging.info(f"  Joint torques [Nm]:           {format_vector(state['joint_torques_nm'])}")
     logging.info(f"  TCP pose [m, rad]:            {format_vector(state['tcp_pose_m_rad'])}")
+    logging.info(f"  TCP offset [m, rad]:          {format_vector(state['tcp_offset_m_rad'])}")
     logging.info(f"  TCP speed [m/s, rad/s]:       {format_vector(state['tcp_speed_m_s_rad_s'])}")
     logging.info(f"  TCP acceleration [m/s^2]:     {format_vector(state['tcp_acceleration_m_s2'])}")
     logging.info(f"  TCP force [N, Nm]:            {format_vector(state['tcp_force_n_nm'])}")
