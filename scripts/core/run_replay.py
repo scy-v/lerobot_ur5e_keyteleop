@@ -19,6 +19,7 @@ class ReplayConfig:
         self.robot_ip: str = robot["ip"]
         self.gripper_port: str = robot["gripper_port"]
         self.use_gripper: bool = robot.get("use_gripper", True)
+        self.init_gripper: bool = robot.get("init_gripper", True)
         self.gripper_reverse: bool = robot.get("gripper_reverse", False)
         self.gripper_force: int = robot.get("gripper_force", 70)
         self.gripper_speed: int = robot.get("gripper_speed", 60)
@@ -30,6 +31,7 @@ def run_replay(replay_cfg: ReplayConfig):
         robot_ip=replay_cfg.robot_ip,
         gripper_port=replay_cfg.gripper_port,
         use_gripper=replay_cfg.use_gripper,
+        init_gripper=replay_cfg.init_gripper,
         gripper_reverse=replay_cfg.gripper_reverse,
         gripper_force=replay_cfg.gripper_force,
         gripper_speed=replay_cfg.gripper_speed,

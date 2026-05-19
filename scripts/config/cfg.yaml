@@ -1,5 +1,5 @@
 record:
-  repo_id: &repo_id "scylearning/insert_reagent_bottle_into_rack"
+  repo_id: &repo_id "scylearning/insert_small_reagent_bottle_into_rack"
   # repo_id: &repo_id "scylearning/pick_greencube_into_trashbin" 
   # Suggested format: <hf_username>/<description>, description = task.description -> Verb_SourceObject_prep_TargetObject
   # e.g. Pick up the green cube and put it into the trash bin -> pick_greencube_into_trashbin
@@ -9,6 +9,7 @@ record:
   robot:
     ip: &ip "192.168.201.11" # robot_ip
     use_gripper: &use_gripper True
+    init_gripper: &init_gripper True # If False, skip DH gripper init_state/init_feedback
     close_threshold: 0.7 # threshold to determine gripper open/close
     gripper_bin_threshold: 0.98 # threshold to determine gripper is closed
     gripper_port: &gripper_port "/dev/ur5e_left_gripper" # gripper_port
@@ -18,7 +19,7 @@ record:
     debug: False # if True, robot will not execute arm actions, but gripper can still be controlled
     control_space: "force" # "position" or "force"
     reference_frame: "tcp" # "base" or "tcp"; tcp_pose fields store EE/flange pose after removing UR TCP offset
-    init_pose: [0.614137, -0.074413, 0.122977, 2.126091, -2.270512, -0.030781] # robot reset TCP pose [x, y, z, rx, ry, rz]
+    init_pose: [0.621186, -0.070673, 0.292553, 2.126131, -2.270473, -0.030898] # robot reset TCP pose [x, y, z, rx, ry, rz]
     init_pos_range: [0.02, 0.02, 0.02] # max random range for reset TCP position [x, y, z]
     force_mode:
       kp: 1200
@@ -48,12 +49,12 @@ record:
     force_rot_step_size: 0.05 # keyboard euler angle target delta for force control [rx, ry, rz]
 
   task:
-    description: "Insert the reagent bottle into the rack" # task description
-    num_episodes: 73 # number of episodes to record
+    description: "Insert the small reagent bottle into the rack" # task description
+    num_episodes: 150 # number of episodes to record
     display: True # Whether to display the data during recording
-    resume: True
-    resume_dataset: scylearning/insert_reagent_bottle_into_rack_20260516_v01 # dataset to resume from if resume is True
-    
+    resume: False
+    resume_dataset: scylearning/insert_small_reagent_bottle_into_rack_20260516_v01 # dataset to resume from if resume is True
+
   time:
     episode_time_sec: 600 # max time per episode in seconds
     reset_time_sec: 600 # max time to reset between episodes in seconds
@@ -75,6 +76,7 @@ replay:
     ip: *ip
     gripper_port: *gripper_port
     use_gripper: *use_gripper
+    init_gripper: *init_gripper
     gripper_reverse: *gripper_reverse
     gripper_force: *gripper_force
     gripper_speed: *gripper_speed

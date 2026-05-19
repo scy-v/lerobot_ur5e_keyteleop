@@ -2,6 +2,8 @@ import logging
 import time
 from typing import Any
 import threading
+import serial
+import crcmod
 from rtde_control import RTDEControlInterface
 from rtde_receive import RTDEReceiveInterface
 
@@ -77,8 +79,14 @@ class UR5e(Robot):
 
     def _check_gripper_connection(self, port: str):
         print("\n[GRIPPER] Initializing gripper...")
-        gripper = PGE(port)
-        gripper.init_feedback()
+        if self.config.init_gripper:
+            gripper = PGE(port)
+            gripper.init_feedback()
+        else:
+            gripper = PGE.__new__(PGE)
+            gripper.ser = serial.Serial(port=port, baudrate=115200)
+            gripper.crc16 = crcmod.mkCrcFun(0x18005, rev=True, initCrc=0xFFFF, xorOut=0x0000)
+            print("[GRIPPER] Skipped init_state and init_feedback by config.")
         gripper.set_force(self._gripper_force)
         gripper.set_vel(self._gripper_speed)
         print(f"[GRIPPER] Force: {self._gripper_force}, speed: {self._gripper_speed}")

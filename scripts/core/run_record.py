@@ -44,6 +44,7 @@ class RecordConfig:
         self.robot_ip: str = robot["ip"]
         self.gripper_port: str = robot["gripper_port"]
         self.use_gripper: bool = robot.get("use_gripper", True)
+        self.init_gripper: bool = robot.get("init_gripper", True)
         self.close_threshold: float = robot.get("close_threshold", 0.7)
         self.gripper_reverse: bool = robot.get("gripper_reverse", False)
         self.gripper_bin_threshold: float = robot.get("gripper_bin_threshold", 0.98)
@@ -273,6 +274,7 @@ def run_record(record_cfg: RecordConfig):
             gripper_port=record_cfg.gripper_port,
             cameras=camera_config,
             use_gripper=record_cfg.use_gripper,
+            init_gripper=record_cfg.init_gripper,
             close_threshold=record_cfg.close_threshold,
             gripper_reverse=record_cfg.gripper_reverse,
             gripper_bin_threshold=record_cfg.gripper_bin_threshold,

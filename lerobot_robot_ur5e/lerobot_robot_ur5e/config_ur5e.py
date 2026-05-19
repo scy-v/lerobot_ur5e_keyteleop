@@ -8,6 +8,7 @@ from lerobot.robots.config import RobotConfig
 @dataclass
 class UR5eConfig(RobotConfig):
     use_gripper: bool = True
+    init_gripper: bool = True
     gripper_reverse: bool = False
     robot_ip: str = "192.168.1.184"
     gripper_port: str = "/dev/ur5e_left_gripper"
