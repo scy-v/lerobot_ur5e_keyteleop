@@ -9,7 +9,7 @@ record:
   robot:
     ip: &ip "192.168.201.11" # robot_ip
     use_gripper: &use_gripper True
-    init_gripper: &init_gripper False # If False, skip DH gripper init_state/init_feedback
+    init_gripper: &init_gripper True # If False, skip DH gripper init_state/init_feedback
     close_threshold: 0.7 # threshold to determine gripper open/close
     gripper_bin_threshold: 0.98 # threshold to determine gripper is closed
     gripper_port: &gripper_port "/dev/ur5e_left_gripper" # gripper_port
