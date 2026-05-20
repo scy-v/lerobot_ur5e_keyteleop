@@ -40,7 +40,7 @@ def main():
 
     while True:
         val = input("Target position: ").strip()
-        gripper.set_pos(val=int(val), blocking=True)
+        gripper.set_pos(val=int(val), blocking=False)
 
 
 if __name__ == "__main__":
