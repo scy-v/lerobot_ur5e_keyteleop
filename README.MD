@@ -118,6 +118,8 @@ huggingface-cli whoami  # Verify successful login
 ```
 
 ### 3.2 Start Recording
+> **⚠️ Recommended: Set TCP Position to `[0, 0, 0, 0, 0, 0]` on the UR teach pendant to use EE/tool0 as a fixed end-effector frame, avoid inconsistent end-effector frames caused by temporary TCP changes, and support later model training.**
+
 1. Turn on **Remote Control** on the UR5e teach pendant.
 2. Verify that the parameters in `cfg.yaml` are correct.
 3. To ensure standardized data collection, please read `10. Dataset Naming and Recording Details` before running the following command:
