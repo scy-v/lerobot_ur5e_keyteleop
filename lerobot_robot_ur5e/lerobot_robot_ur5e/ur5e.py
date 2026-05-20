@@ -420,28 +420,32 @@ class UR5e(Robot):
                 self.config.force_limit,
             )
 
-    def _sample_init_pose(self, init_pose: list[float], init_pos_range: list[float]) -> list[float]:
+    def _sample_init_pose(self, init_pose: list[float], init_pose_range: list[float]) -> list[float]:
         if len(init_pose) != 6:
             raise ValueError(f"init_pose must contain 6 values, got {len(init_pose)}.")
-        if len(init_pos_range) != 3:
-            raise ValueError(f"init_pos_range must contain 3 values, got {len(init_pos_range)}.")
+        if len(init_pose_range) != 6:
+            raise ValueError(f"init_pose_range must contain 6 values, got {len(init_pose_range)}.")
 
         target_pose = np.array(init_pose, dtype=float)
-        random_range = np.abs(np.array(init_pos_range, dtype=float))
-        target_pose[:3] += np.random.uniform(-random_range, random_range)
+        random_range = np.abs(np.array(init_pose_range, dtype=float))
+        target_pose[:3] += np.random.uniform(-random_range[:3], random_range[:3])
+
+        init_euler = R.from_rotvec(target_pose[3:]).as_euler("xyz", degrees=True)
+        delta_euler_deg = np.random.uniform(-random_range[3:], random_range[3:])
+        target_pose[3:] = R.from_euler("xyz", init_euler + delta_euler_deg, degrees=True).as_rotvec()
         return target_pose.tolist()
 
     def reset_to_init_pose(
         self,
         init_pose: list[float] | None = None,
-        init_pos_range: list[float] | None = None,
+        init_pose_range: list[float] | None = None,
     ) -> None:
         if not self.is_connected:
             raise DeviceNotConnectedError(f"{self} is not connected.")
 
         target_pose = self._sample_init_pose(
             init_pose if init_pose is not None else self.config.init_pose,
-            init_pos_range if init_pos_range is not None else self.config.init_pos_range,
+            init_pose_range if init_pose_range is not None else self.config.init_pose_range,
         )
 
         logger.info("Resetting to initial TCP pose.")

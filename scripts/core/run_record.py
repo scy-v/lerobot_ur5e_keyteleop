@@ -71,7 +71,11 @@ class RecordConfig:
         self.payload_mass: float = payload_cfg.get("mass", 1.601)
         self.payload_cog: list = payload_cfg.get("cog", [0.011, -0.002, 0.052])
         self.init_pose: list[float] = robot["init_pose"]
-        self.init_pos_range: list[float] = robot.get("init_pos_range", [0.0, 0.0, 0.0])
+        legacy_init_pos_range = robot.get("init_pos_range", [0.0, 0.0, 0.0])
+        self.init_pose_range: list[float] = robot.get(
+            "init_pose_range",
+            [*legacy_init_pos_range, 0.0, 0.0, 0.0],
+        )
 
         # teleop config
         self.teleop_position_step_size: float = teleop.get("position_step_size", teleop.get("step_size", 0.01))
@@ -227,7 +231,7 @@ def reset_to_init_pose(
         return
 
     logging.info("====== [RESET] Automatically resetting to configured initial TCP pose ======")
-    robot.reset_to_init_pose(record_cfg.init_pose, record_cfg.init_pos_range)
+    robot.reset_to_init_pose(record_cfg.init_pose, record_cfg.init_pose_range)
 
 
 def run_record(record_cfg: RecordConfig):
@@ -301,7 +305,7 @@ def run_record(record_cfg: RecordConfig):
             payload_mass=record_cfg.payload_mass,
             payload_cog=record_cfg.payload_cog,
             init_pose=record_cfg.init_pose,
-            init_pos_range=record_cfg.init_pos_range,
+            init_pose_range=record_cfg.init_pose_range,
             reference_frame=record_cfg.reference_frame,
         )
         # Initialize the robot and teleoperator
@@ -343,7 +347,7 @@ def run_record(record_cfg: RecordConfig):
         teleop_action_processor, robot_action_processor, robot_observation_processor = make_default_processors()
 
         robot.connect()
-        robot.reset_to_init_pose(record_cfg.init_pose, record_cfg.init_pos_range)
+        robot.reset_to_init_pose(record_cfg.init_pose, record_cfg.init_pose_range)
         teleop.connect()
 
         episode_idx = 0
