@@ -265,6 +265,7 @@ def run_record(record_cfg: RecordConfig):
         camera_config = {"wrist_image": wrist_image_cfg, "exterior_image": exterior_image_cfg}
         teleop_config = UR5eTeleopConfig(
             use_gripper=record_cfg.use_gripper,
+            init_gripper=record_cfg.init_gripper,
             step_size=record_cfg.teleop_step_size,
             rot_step_size=record_cfg.teleop_rot_step_size,
             reference_frame=record_cfg.reference_frame,

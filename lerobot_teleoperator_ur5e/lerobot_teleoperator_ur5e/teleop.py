@@ -164,10 +164,20 @@ class UR5eTeleop(KeyboardTeleop):
         self.rot_step_size = config.rot_step_size
         self.reference_frame = config.reference_frame
         self.robot = None
-        self.gripper_action = 1.0
+        self.gripper_action = self._get_initial_gripper_action()
 
     def set_robot(self, robot) -> None:
         self.robot = robot
+
+    def _get_initial_gripper_action(self) -> float:
+        if self.config.init_gripper:
+            return 1.0
+
+        while True:
+            value = input("Please enter the initial gripper action (0 or 1): ").strip()
+            if value in {"0", "1"}:
+                return float(value)
+            print("Invalid input. Please enter 0 or 1.")
 
     def _pose_to_matrix(self, tcp_pose: list[float]) -> np.ndarray:
         transform = np.eye(4)
