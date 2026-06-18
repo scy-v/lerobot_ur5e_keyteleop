@@ -34,7 +34,7 @@ class UR5eConfig(RobotConfig):
     gain: int = 300
     payload_mass: float = 1.601
     payload_cog: list = field(default_factory=lambda: [0.011, -0.002, 0.052])
-    init_pose: list = field(default_factory=lambda: [0.614137, -0.074413, 0.122977, 2.126091, -2.270512, -0.030781])
+    init_pose: list = field(default_factory=lambda: [0.614137, -0.074413, 0.122977, 3.106029, -0.009024, -1.636309])
     init_pose_range: list = field(default_factory=lambda: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
     reference_frame: str = "base"  # "base" or "tcp"
     control_space: str = "position"  # "position" or "force"

@@ -1,5 +1,5 @@
 record:
-  repo_id: &repo_id "scylearning/insert_object_into_hole"
+  repo_id: &repo_id "scylearning/insert_bottle_into_rack"
   # repo_id: &repo_id "scylearning/pick_greencube_into_trashbin" 
   # Suggested format: <hf_username>/<description>, description = task.description -> Verb_SourceObject_prep_TargetObject
   # e.g. Pick up the green cube and put it into the trash bin -> pick_greencube_into_trashbin
@@ -9,25 +9,25 @@ record:
   robot:
     ip: &ip "192.168.201.11" # robot_ip
     use_gripper: &use_gripper True
-    init_gripper: &init_gripper False # If False, skip DH gripper init_state/init_feedback
+    init_gripper: &init_gripper True # If False, skip DH gripper init_state/init_feedback
     close_threshold: 0.7 # threshold to determine gripper open/close
     gripper_bin_threshold: 0.98 # threshold to determine gripper is closed
     gripper_port: &gripper_port "/dev/ur5e_left_gripper" # gripper_port
     gripper_reverse: &gripper_reverse False # If gripper moves opposite, flip this value
-    gripper_force: &gripper_force 70 # gripper force command
+    gripper_force: &gripper_force 100 # gripper force command
     gripper_speed: &gripper_speed 60 # gripper speed command
     debug: False # if True, robot will not execute arm actions, but gripper can still be controlled
     control_space: "force" # "position" or "force"
     reference_frame: "tcp" # "base" or "tcp"; tcp_pose fields store EE/flange pose after removing UR TCP offset
-    init_pose: [0.572360, -0.060119, 0.353193, -2.219221, 2.223016, -0.000515] # robot reset TCP pose [x, y, z, rx, ry, rz]
-    init_pose_range: [0.02, 0.02, 0.02, 0.0, 0.0, 20.0] # max random range for reset TCP pose [x, y, z, roll_deg, pitch_deg, yaw_deg]
+    init_pose: [0.556560, -0.039545, 0.279727, -3.14, 0.0, -1.57] # robot reset TCP pose [x, y, z, roll, pitch, yaw] in radians
+    init_pose_range: [0.02, 0.02, 0.02, 0.0, 0.0, 0.0] # max random range for reset TCP pose [x, y, z, roll_deg, pitch_deg, yaw_deg]
     force_mode:
       kp: 1200
       kd: 600
       kp_rot: 2000
       kd_rot: 400
       rtde_freq: 100
-      select_vector: [1, 1, 1, 0, 0, 1]
+      select_vector: [1, 1, 1, 0, 0, 0]
       force_limit: [2, 2, 2, 2, 2, 2]
       pos_delta: 0.02
       vel_delta: 4.0                                                                                                                                                                                                                                                                                                                                                                                    
@@ -49,11 +49,11 @@ record:
     force_rot_step_size: 0.05 # keyboard euler angle target delta for force control [rx, ry, rz]
 
   task:
-    description: "Insert the object into the hole" # task description
+    description: "Pick up the reagent bottle and insert it into the rack" # task description
     num_episodes: 150 # number of episodes to record
     display: True # Whether to display the data during recording
     resume: False
-    resume_dataset: scylearning/insert_small_reagent_bottle_into_rack_20260516_v01 # dataset to resume from if resume is True
+    resume_dataset: scylearning/Insert_square_bottle_into_slot_20260522_v01 # dataset to resume from if resume is True
 
   time:
     episode_time_sec: 600 # max time per episode in seconds
@@ -82,8 +82,8 @@ replay:
     gripper_speed: *gripper_speed
 
 visualize:
-  dataset_name: scylearning/insert_object_into_hole_20260521_v01
-  episode_index: 140 # episode index to visualize
+  dataset_name: scylearning/Insert_pipette_into_tip_20260522_v01
+  episode_index: 105 # episode index to visualize
   default_obs_group: "tcp_pose" # default observation group shown in the data window
   data_window: True # open a local browser window for per-frame action and selected observation data
   print_to_terminal: False # also print per-frame data to terminal

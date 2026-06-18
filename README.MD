@@ -97,8 +97,8 @@ Key robot fields:
   - `tcp`: action delta is expressed in the current end-effector frame, and `tcp_pose` observation is relative to the episode reference pose.
   - For consistency across UR TCP-offset changes, `tcp_pose` stores the EE/flange pose converted from UR TCP pose and TCP offset.
   - Collected `tcp_pose` and action data use EE/flange semantics; outside that, other UR state reads, reset poses, and low-level control commands still use UR TCP semantics.
-- `init_pose`: reset TCP pose `[x, y, z, rx, ry, rz]`.
-- `init_pose_range`: random reset pose range for `[x, y, z, roll_deg, pitch_deg, yaw_deg]`.
+- `init_pose`: reset TCP pose `[x, y, z, roll, pitch, yaw]`; rotation is configured as XYZ Euler angles in radians and converted to a UR rotation vector internally.
+- `init_pose_range`: random reset pose range for `[x, y, z, roll_deg, pitch_deg, yaw_deg]`; rotation range is in degrees.
 - `teleop.position_step_size`: keyboard translation delta for position control.
 - `teleop.force_step_size`: keyboard translation delta for force control.
 - `teleop.position_rot_step_size`: keyboard Euler-angle delta for position control.

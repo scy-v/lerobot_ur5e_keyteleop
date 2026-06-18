@@ -430,9 +430,11 @@ class UR5e(Robot):
         random_range = np.abs(np.array(init_pose_range, dtype=float))
         target_pose[:3] += np.random.uniform(-random_range[:3], random_range[:3])
 
-        init_euler = R.from_rotvec(target_pose[3:]).as_euler("xyz", degrees=True)
         delta_euler_deg = np.random.uniform(-random_range[3:], random_range[3:])
-        target_pose[3:] = R.from_euler("xyz", init_euler + delta_euler_deg, degrees=True).as_rotvec()
+        target_euler = target_pose[3:] + np.deg2rad(delta_euler_deg)
+        # init_pose uses XYZ Euler radians; init_pose_range rotation uses degrees.
+        # UR moveL expects a rotation vector.
+        target_pose[3:] = R.from_euler("xyz", target_euler).as_rotvec()
         return target_pose.tolist()
 
     def reset_to_init_pose(
