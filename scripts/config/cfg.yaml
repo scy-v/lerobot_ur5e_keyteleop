@@ -29,7 +29,7 @@ record:
       rtde_freq: 100
       select_vector: [1, 1, 1, 0, 0, 0]
       force_limit: [2, 2, 2, 2, 2, 2]
-      pos_delta: 0.02
+      pos_delta: 0.048
       vel_delta: 4.0                                                                                                                                                                                                                                                                                                                                                                                    
       gain_scale: 1.5
     position_mode:
@@ -44,7 +44,7 @@ record:
 
   teleop:
     position_step_size: 0.006 # keyboard xyz target delta for position control
-    force_step_size: 0.048 # keyboard xyz target delta for force control
+    force_step_size: 0.025 # keyboard xyz target delta for force control
     position_rot_step_size: 0.02 # keyboard euler angle target delta for position control [rx, ry, rz]
     force_rot_step_size: 0.05 # keyboard euler angle target delta for force control [rx, ry, rz]
 
