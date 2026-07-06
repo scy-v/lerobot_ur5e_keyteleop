@@ -12,4 +12,6 @@ class UR5eTeleopConfig(TeleoperatorConfig):
     init_gripper: bool = True
     step_size: float = 0.048
     rot_step_size: float = 0.05
+    alternate_step_size: float | None = None
+    alternate_rot_step_size: float | None = None
     reference_frame: str = "base"

@@ -101,8 +101,11 @@ map_gripper.sh ur5e_left_gripper
 - `init_pose_range`：复位位姿 `[x, y, z, roll_deg, pitch_deg, yaw_deg]` 的随机范围；旋转范围单位为度。
 - `teleop.position_step_size`：position 控制下的键盘平移增量。
 - `teleop.force_step_size`：force 控制下的键盘平移增量。
+- `teleop.force_fine_step_size`：按 `/` 切换后的 force 控制键盘平移增量。
 - `teleop.position_rot_step_size`：position 控制下的键盘欧拉角增量。
 - `teleop.force_rot_step_size`：force 控制下的键盘欧拉角增量。
+- `teleop.force_fine_rot_step_size`：按 `/` 切换后的 force 控制键盘欧拉角增量。
+- `robot.force_mode.hold_current_pose_on_idle`：为 `True` 时，force 控制在没有运动按键输入时保持当前实际 TCP 位姿。
 
 ## 📥 3. 数据集记录
 
@@ -216,6 +219,7 @@ tools-prune-dataset "[id1,...,idN]"
 | `b` / `v` | rz 正方向 / 负方向旋转 |
 | `o` | 夹爪保持打开 |
 | `l` | 夹爪保持闭合 |
+| `/` | 切换 force 控制步长 |
 
 ## 🗂️ 10. 数据集命名与记录详解
 

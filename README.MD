@@ -101,8 +101,11 @@ Key robot fields:
 - `init_pose_range`: random reset pose range for `[x, y, z, roll_deg, pitch_deg, yaw_deg]`; rotation range is in degrees.
 - `teleop.position_step_size`: keyboard translation delta for position control.
 - `teleop.force_step_size`: keyboard translation delta for force control.
+- `teleop.force_fine_step_size`: alternate force-control translation delta toggled by `/`.
 - `teleop.position_rot_step_size`: keyboard Euler-angle delta for position control.
 - `teleop.force_rot_step_size`: keyboard Euler-angle delta for force control.
+- `teleop.force_fine_rot_step_size`: alternate force-control Euler-angle delta toggled by `/`.
+- `robot.force_mode.hold_current_pose_on_idle`: if `True`, force control holds the current actual TCP pose when no motion key is pressed.
 
 ## 📥 3. Dataset Recording
 
@@ -216,6 +219,7 @@ tools-prune-dataset "[id1,...,idN]"
 | `b` / `v` | Rotate rz positive / negative |
 | `o` | Latch gripper open |
 | `l` | Latch gripper close |
+| `/` | Toggle force-control step size |
 
 ## 🗂️ 10. Dataset Naming and Recording Details
 

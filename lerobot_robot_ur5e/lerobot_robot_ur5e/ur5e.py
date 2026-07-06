@@ -37,6 +37,7 @@ class UR5e(Robot):
         self._gripper_position = 1.0
         self._last_gripper_position = 1.0
         self._episode_reference_ee_pose = None
+        self._force_hold_pose = None
         self.task_frame = [0, 0, 0, 0, 0, 0]
         self.type = 2
         self._send_action_freq_t = time.perf_counter()
@@ -244,10 +245,33 @@ class UR5e(Robot):
         target_ee_pose = self._transform_to_pose(target_transform)
         return self._ee_to_tcp_pose(target_ee_pose, tcp_offset)
 
+    def _has_motion_delta(self, action: dict[str, Any]) -> bool:
+        action_keys = ("delta_x", "delta_y", "delta_z", "delta_rx", "delta_ry", "delta_rz")
+        return any(abs(float(action[key])) > 0.0 for key in action_keys)
+
+    def _target_pose_from_force_action(
+        self,
+        action: dict[str, Any],
+        current_tcp_pose: list[float] | None = None,
+    ) -> list[float]:
+        if not self.config.hold_current_pose_on_idle:
+            return self._target_pose_from_action(action)
+
+        if self._has_motion_delta(action):
+            self._force_hold_pose = None
+            return self._target_pose_from_action(action)
+
+        if self._force_hold_pose is None:
+            if current_tcp_pose is None:
+                current_tcp_pose = self._arm["rtde_r"].getActualTCPPose()
+            self._force_hold_pose = list(current_tcp_pose)
+
+        return list(self._force_hold_pose)
+
     def _calculate_ft_target(self, action: dict[str, Any]) -> list[float]:
         curr_pose = self._arm["rtde_r"].getActualTCPPose()
         curr_vel = self._arm["rtde_r"].getActualTCPSpeed()
-        target_pose = self._target_pose_from_action(action)
+        target_pose = self._target_pose_from_force_action(action, curr_pose)
 
         return self._calculate_force(target_pose, curr_pose, curr_vel)
 
@@ -411,6 +435,7 @@ class UR5e(Robot):
         return np.concatenate([ee_pos, ee_rot])
 
     def stop_force(self):
+        self._force_hold_pose = None
         if self.is_connected and self.config.control_space == "force":
             self._arm["rtde_c"].forceMode(
                 self.task_frame,

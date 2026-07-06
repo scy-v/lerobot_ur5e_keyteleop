@@ -21,6 +21,7 @@ class UR5eConfig(RobotConfig):
     kd: int = 600
     kp_rot: int = 2000
     kd_rot: int = 400
+    hold_current_pose_on_idle: bool = False
     rtde_freq: int = 100
     select_vector: list = field(default_factory=lambda: [1, 1, 1, 0, 0, 0])
     force_limit: list = field(default_factory=lambda: [2, 2, 2, 2, 2, 2])

@@ -113,9 +113,13 @@ class KeyboardTeleop(Teleoperator):
         self.event_queue.put((key, False))
 
     def _drain_pressed_keys(self):
+        key_events = []
         while not self.event_queue.empty():
             key_char, is_pressed = self.event_queue.get_nowait()
+            was_pressed = self.current_pressed.get(key_char, False)
             self.current_pressed[key_char] = is_pressed
+            key_events.append((key_char, is_pressed, was_pressed))
+        return key_events
 
     def configure(self):
         pass
@@ -160,8 +164,13 @@ class UR5eTeleop(KeyboardTeleop):
     def __init__(self, config: UR5eTeleopConfig):
         super().__init__(config)
         self.config = config
-        self.step_size = config.step_size
-        self.rot_step_size = config.rot_step_size
+        self.default_step_size = config.step_size
+        self.default_rot_step_size = config.rot_step_size
+        self.alternate_step_size = config.alternate_step_size
+        self.alternate_rot_step_size = config.alternate_rot_step_size
+        self.use_alternate_step_size = False
+        self.step_size = self.default_step_size
+        self.rot_step_size = self.default_rot_step_size
         self.reference_frame = config.reference_frame
         self.robot = None
         self.gripper_action = self._get_initial_gripper_action()
@@ -178,6 +187,30 @@ class UR5eTeleop(KeyboardTeleop):
             if value in {"0", "1"}:
                 return float(value)
             print("Invalid input. Please enter 0 or 1.")
+
+    def _toggle_step_size(self) -> None:
+        if self.alternate_step_size is None or self.alternate_rot_step_size is None:
+            return
+
+        self.use_alternate_step_size = not self.use_alternate_step_size
+        if self.use_alternate_step_size:
+            self.step_size = self.alternate_step_size
+            self.rot_step_size = self.alternate_rot_step_size
+            mode = "fine"
+        else:
+            self.step_size = self.default_step_size
+            self.rot_step_size = self.default_rot_step_size
+            mode = "default"
+
+        logging.info(
+            f"====== [TELEOP] Step size switched to {mode}: "
+            f"step_size={self.step_size}, rot_step_size={self.rot_step_size} ======"
+        )
+
+    def reset_step_size(self) -> None:
+        self.use_alternate_step_size = False
+        self.step_size = self.default_step_size
+        self.rot_step_size = self.default_rot_step_size
 
     def _pose_to_matrix(self, tcp_pose: list[float]) -> np.ndarray:
         transform = np.eye(4)
@@ -247,7 +280,12 @@ class UR5eTeleop(KeyboardTeleop):
                 "KeyboardTeleop is not connected. You need to run `connect()` before `get_action()`."
             )
 
-        self._drain_pressed_keys()
+        key_events = self._drain_pressed_keys()
+        slash_key = keyboard.KeyCode.from_char("/")
+        for key, is_pressed, was_pressed in key_events:
+            if key == slash_key and is_pressed and not was_pressed:
+                self._toggle_step_size()
+
         action_values = {axis: 0.0 for axis in ("delta_x", "delta_y", "delta_z", "delta_rx", "delta_ry", "delta_rz")}
 
         key_mapping = {

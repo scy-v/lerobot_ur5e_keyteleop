@@ -57,6 +57,10 @@ class RecordConfig:
         self.kd: int = force_cfg.get("kd", 200)
         self.kp_rot: int = force_cfg.get("kp_rot", 4000)
         self.kd_rot: int = force_cfg.get("kd_rot", 800)
+        self.hold_current_pose_on_idle: bool = force_cfg.get(
+            "hold_current_pose_on_idle",
+            force_cfg.get("hold_last_target_pose", False),
+        )
         self.rtde_freq: int = force_cfg.get("rtde_freq", 125)
         self.select_vector: list = force_cfg.get("select_vector", [1, 1, 1, 1, 1, 1])
         self.force_limit: list = force_cfg.get("force_limit", [2, 2, 2, 2, 2, 2])
@@ -80,14 +84,20 @@ class RecordConfig:
         # teleop config
         self.teleop_position_step_size: float = teleop.get("position_step_size", teleop.get("step_size", 0.01))
         self.teleop_force_step_size: float = teleop.get("force_step_size", teleop.get("step_size", 0.048))
+        self.teleop_force_fine_step_size: float = teleop.get("force_fine_step_size", self.teleop_force_step_size)
         self.teleop_position_rot_step_size: float = teleop.get("position_rot_step_size", teleop.get("rot_step_size", 0.02))
         self.teleop_force_rot_step_size: float = teleop.get("force_rot_step_size", teleop.get("rot_step_size", 0.05))
+        self.teleop_force_fine_rot_step_size: float = teleop.get("force_fine_rot_step_size", self.teleop_force_rot_step_size)
         if self.control_space == "position":
             self.teleop_step_size: float = self.teleop_position_step_size
             self.teleop_rot_step_size: float = self.teleop_position_rot_step_size
+            self.teleop_alternate_step_size: float | None = None
+            self.teleop_alternate_rot_step_size: float | None = None
         elif self.control_space == "force":
             self.teleop_step_size: float = self.teleop_force_step_size
             self.teleop_rot_step_size: float = self.teleop_force_rot_step_size
+            self.teleop_alternate_step_size: float | None = self.teleop_force_fine_step_size
+            self.teleop_alternate_rot_step_size: float | None = self.teleop_force_fine_rot_step_size
         else:
             raise ValueError(f"Unsupported control_space: {self.control_space}")
 
@@ -272,6 +282,8 @@ def run_record(record_cfg: RecordConfig):
             init_gripper=record_cfg.init_gripper,
             step_size=record_cfg.teleop_step_size,
             rot_step_size=record_cfg.teleop_rot_step_size,
+            alternate_step_size=record_cfg.teleop_alternate_step_size,
+            alternate_rot_step_size=record_cfg.teleop_alternate_rot_step_size,
             reference_frame=record_cfg.reference_frame,
         )
         robot_config = UR5eConfig(
@@ -291,6 +303,7 @@ def run_record(record_cfg: RecordConfig):
             kd=record_cfg.kd,
             kp_rot=record_cfg.kp_rot,
             kd_rot=record_cfg.kd_rot,
+            hold_current_pose_on_idle=record_cfg.hold_current_pose_on_idle,
             rtde_freq=record_cfg.rtde_freq,
             select_vector=record_cfg.select_vector,
             force_limit=record_cfg.force_limit,
@@ -355,6 +368,7 @@ def run_record(record_cfg: RecordConfig):
         while episode_idx < record_cfg.num_episodes and not events["stop_recording"]:
             events["exit_early"] = False
             events["rerecord_episode"] = False
+            teleop.reset_step_size()
             robot.set_episode_reference_pose()
             logging.info(f"====== [RECORD] Recording episode {episode_idx + 1} of {record_cfg.num_episodes} ======")
             episode_record_start = time_module.perf_counter()
