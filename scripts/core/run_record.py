@@ -2,11 +2,9 @@ import yaml
 from pathlib import Path
 from typing import Dict, Any
 from scripts.utils.dataset_utils import generate_dataset_name, update_dataset_info
+from scripts.core.record_loop import record_loop
 from lerobot_robot_ur5e import UR5eConfig, UR5e
 from lerobot_teleoperator_ur5e import UR5eTeleopConfig, UR5eTeleop
-from lerobot.cameras.configs import ColorMode, Cv2Rotation
-from lerobot.cameras.realsense.camera_realsense import RealSenseCameraConfig
-from lerobot.scripts.lerobot_record import record_loop
 from lerobot.processor import make_default_processors
 from lerobot.utils.visualization_utils import init_rerun
 from lerobot.utils.control_utils import init_keyboard_listener
@@ -27,7 +25,7 @@ class RecordConfig:
         storage = cfg["storage"]
         task = cfg["task"]
         time = cfg["time"]
-        cam = cfg["cameras"]
+        cam = cfg.get("cameras", {})
         robot = cfg["robot"]
         teleop = cfg.get("teleop", {})
         force_cfg = robot.get("force_mode", {})
@@ -52,6 +50,10 @@ class RecordConfig:
         self.gripper_speed: int = robot.get("gripper_speed", 60)
         self.control_space: str = robot.get("control_space", "position")
         self.reference_frame: str = robot.get("reference_frame", "base")
+        self.control_frame_euler_deg: list = teleop.get(
+            "control_frame_euler_deg",
+            force_cfg.get("control_frame_euler_deg", [0.0, 0.0, 0.0]),
+        )
         self.debug: bool = robot.get("debug", False)
         self.kp: int = force_cfg.get("kp", 2000)
         self.kd: int = force_cfg.get("kd", 200)
@@ -114,13 +116,68 @@ class RecordConfig:
         self.save_mera_period: int = time.get("save_meta_period", time.get("save_mera_period", 1))
 
         # cameras config
-        self.wrist_cam_serial: str = cam["wrist_cam_serial"]
-        self.exterior_cam_serial: str = cam["exterior_cam_serial"]
+        cameras_enabled = cam.get("enabled", True)
+        if not isinstance(cameras_enabled, bool):
+            raise ValueError("cameras.enabled must be true or false.")
+        self.cameras_enabled: bool = cameras_enabled
+        self.wrist_cam_serial: str | None = cam.get("wrist_cam_serial")
+        self.exterior_cam_serial: str | None = cam.get("exterior_cam_serial")
         self.width: int = cam.get("width", 640)
         self.height: int = cam.get("height", 480)
+        self.dummy_value: int = cam.get("dummy_value", 0)
 
         # storage config
         self.push_to_hub: bool = storage.get("push_to_hub", False)
+
+
+def make_camera_configs(record_cfg: RecordConfig) -> dict:
+    camera_names = ("wrist_image", "exterior_image")
+    if not record_cfg.cameras_enabled:
+        from lerobot_robot_ur5e import DummyCameraConfig
+
+        logging.info(
+            "====== [CAM] RealSense disabled; using dummy frames for %s ======",
+            ", ".join(camera_names),
+        )
+        return {
+            name: DummyCameraConfig(
+                fps=record_cfg.fps,
+                width=record_cfg.width,
+                height=record_cfg.height,
+                value=record_cfg.dummy_value,
+            )
+            for name in camera_names
+        }
+
+    if not record_cfg.wrist_cam_serial or not record_cfg.exterior_cam_serial:
+        raise ValueError(
+            "Both camera serial numbers are required when cameras.enabled is true."
+        )
+
+    # Import RealSense only when real cameras are enabled.
+    from lerobot.cameras.configs import ColorMode, Cv2Rotation
+    from lerobot.cameras.realsense.camera_realsense import RealSenseCameraConfig
+
+    return {
+        "wrist_image": RealSenseCameraConfig(
+            serial_number_or_name=record_cfg.wrist_cam_serial,
+            fps=record_cfg.fps,
+            width=record_cfg.width,
+            height=record_cfg.height,
+            color_mode=ColorMode.RGB,
+            use_depth=False,
+            rotation=Cv2Rotation.NO_ROTATION,
+        ),
+        "exterior_image": RealSenseCameraConfig(
+            serial_number_or_name=record_cfg.exterior_cam_serial,
+            fps=record_cfg.fps,
+            width=record_cfg.width,
+            height=record_cfg.height,
+            color_mode=ColorMode.RGB,
+            use_depth=False,
+            rotation=Cv2Rotation.NO_ROTATION,
+        ),
+    }
 
 
 def handle_incomplete_dataset(dataset_path) -> bool:
@@ -258,25 +315,8 @@ def run_record(record_cfg: RecordConfig):
     try:
         dataset_name, data_version = generate_dataset_name(record_cfg)
 
-        # Create RealSenseCamera configurations
-        wrist_image_cfg = RealSenseCameraConfig(serial_number_or_name=record_cfg.wrist_cam_serial,
-                                        fps=record_cfg.fps,
-                                        width=record_cfg.width,
-                                        height=record_cfg.height,
-                                        color_mode=ColorMode.RGB,
-                                        use_depth=False,
-                                        rotation=Cv2Rotation.NO_ROTATION)
-
-        exterior_image_cfg = RealSenseCameraConfig(serial_number_or_name=record_cfg.exterior_cam_serial,
-                                        fps=record_cfg.fps,
-                                        width=record_cfg.width,
-                                        height=record_cfg.height,
-                                        color_mode=ColorMode.RGB,
-                                        use_depth=False,
-                                        rotation=Cv2Rotation.NO_ROTATION)
-
         # Create the robot and teleoperator configurations
-        camera_config = {"wrist_image": wrist_image_cfg, "exterior_image": exterior_image_cfg}
+        camera_config = make_camera_configs(record_cfg)
         teleop_config = UR5eTeleopConfig(
             use_gripper=record_cfg.use_gripper,
             init_gripper=record_cfg.init_gripper,
@@ -285,6 +325,8 @@ def run_record(record_cfg: RecordConfig):
             alternate_step_size=record_cfg.teleop_alternate_step_size,
             alternate_rot_step_size=record_cfg.teleop_alternate_rot_step_size,
             reference_frame=record_cfg.reference_frame,
+            control_frame_euler_deg=record_cfg.control_frame_euler_deg,
+            select_vector=record_cfg.select_vector,
         )
         robot_config = UR5eConfig(
             robot_ip=record_cfg.robot_ip,
@@ -320,6 +362,7 @@ def run_record(record_cfg: RecordConfig):
             init_pose=record_cfg.init_pose,
             init_pose_range=record_cfg.init_pose_range,
             reference_frame=record_cfg.reference_frame,
+            control_frame_euler_deg=record_cfg.control_frame_euler_deg,
         )
         # Initialize the robot and teleoperator
         robot = UR5e(robot_config)

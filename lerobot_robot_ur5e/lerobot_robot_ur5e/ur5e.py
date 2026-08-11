@@ -18,6 +18,9 @@ from .config_ur5e import UR5eConfig
 
 logger = logging.getLogger(__name__)
 
+PAYLOAD_SETTLE_TIME_S = 0.25
+FT_ZERO_SETTLE_TIME_S = 0.50
+
 class UR5e(Robot):
     config_class = UR5eConfig
     name = "ur5e"
@@ -38,10 +41,35 @@ class UR5e(Robot):
         self._last_gripper_position = 1.0
         self._episode_reference_ee_pose = None
         self._force_hold_pose = None
-        self.task_frame = [0, 0, 0, 0, 0, 0]
+        self._force_prev_motion_mask = [False] * 6
+        self.control_frame_euler_deg = self._validate_control_frame_euler()
+        self.control_to_base_rotation = R.from_euler(
+            "xyz", self.control_frame_euler_deg, degrees=True
+        ).as_matrix()
+        self.use_control_frame = not np.allclose(
+            self.control_frame_euler_deg, [0.0, 0.0, 0.0]
+        )
+        self.task_frame = self._make_task_frame()
         self.type = 2
         self._send_action_freq_t = time.perf_counter()
         self._send_action_freq_count = 0
+
+    def _validate_control_frame_euler(self) -> list[float]:
+        euler_deg = self.config.control_frame_euler_deg
+        if len(euler_deg) != 3:
+            raise ValueError(
+                "control_frame_euler_deg must contain 3 values, "
+                f"got {len(euler_deg)}."
+            )
+        return [float(value) for value in euler_deg]
+
+    def _make_task_frame(self) -> list[float]:
+        if not self.use_control_frame:
+            return [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        rotvec = R.from_euler(
+            "xyz", self.control_frame_euler_deg, degrees=True
+        ).as_rotvec()
+        return [0.0, 0.0, 0.0, *rotvec.tolist()]
 
     def connect(self, calibrate: bool = True) -> None:
         if self.is_connected:
@@ -154,12 +182,12 @@ class UR5e(Robot):
             **{f"tcp_acc.{axis}": float for axis in ["x", "y", "z"]},
         }
         return {
-            **joint_pos_features,
-            **gripper_features,
             **tcp_pose_features,
             **tcp_vel_features,
             **tcp_force_features,
             **tcp_torque_features,
+            **gripper_features,
+            **joint_pos_features,
             **remaining_features,
         }
 
@@ -187,7 +215,15 @@ class UR5e(Robot):
         rot_err = R.from_matrix(target_rot @ curr_rot.T).as_rotvec()
         torque = (self.config.kp_rot * rot_err - self.config.kd_rot * np.array(curr_vel[3:])) / self.config.rtde_freq
 
-        return np.concatenate((force_pos, torque))
+        return self._wrench_base_to_task(np.concatenate((force_pos, torque)))
+
+    def _wrench_base_to_task(self, wrench_base: np.ndarray) -> np.ndarray:
+        if not self.use_control_frame:
+            return wrench_base
+        base_to_control = self.control_to_base_rotation.T
+        force_task = base_to_control @ wrench_base[:3]
+        torque_task = base_to_control @ wrench_base[3:]
+        return np.concatenate((force_task, torque_task))
 
     def _pose_to_transform(self, pose: list[float] | np.ndarray) -> np.ndarray:
         transform = np.eye(4)
@@ -215,8 +251,13 @@ class UR5e(Robot):
         tcp_transform = ee_transform @ offset_transform
         return self._transform_to_pose(tcp_transform)
 
-    def _target_pose_from_action(self, action: dict[str, Any]) -> list[float]:
-        current_tcp_pose = self._arm["rtde_r"].getActualTCPPose()
+    def _target_pose_from_action(
+        self,
+        action: dict[str, Any],
+        current_tcp_pose: list[float] | None = None,
+    ) -> list[float]:
+        if current_tcp_pose is None:
+            current_tcp_pose = self._arm["rtde_r"].getActualTCPPose()
         tcp_offset = self._get_current_tcp_offset()
         current_ee_pose = self.tcp_to_ee_pose(current_tcp_pose, tcp_offset)
         current_position = np.array(current_ee_pose[:3], dtype=float)
@@ -245,9 +286,26 @@ class UR5e(Robot):
         target_ee_pose = self._transform_to_pose(target_transform)
         return self._ee_to_tcp_pose(target_ee_pose, tcp_offset)
 
-    def _has_motion_delta(self, action: dict[str, Any]) -> bool:
-        action_keys = ("delta_x", "delta_y", "delta_z", "delta_rx", "delta_ry", "delta_rz")
-        return any(abs(float(action[key])) > 0.0 for key in action_keys)
+    def _motion_delta_mask(
+        self,
+        action: dict[str, Any],
+        current_tcp_pose: list[float] | None = None,
+        action_target_pose: list[float] | None = None,
+    ) -> list[bool]:
+        """Hold translation per base axis and orientation as one rotation."""
+        if current_tcp_pose is None:
+            current_tcp_pose = self._arm["rtde_r"].getActualTCPPose()
+        if action_target_pose is None:
+            action_target_pose = self._target_pose_from_action(action, current_tcp_pose)
+        position_mask = np.abs(
+            np.asarray(action_target_pose[:3], dtype=float)
+            - np.asarray(current_tcp_pose[:3], dtype=float)
+        ) > 1e-12
+        rotation_active = any(
+            abs(float(action[key])) > 0.0
+            for key in ("delta_rx", "delta_ry", "delta_rz")
+        )
+        return [*position_mask.tolist(), rotation_active, rotation_active, rotation_active]
 
     def _target_pose_from_force_action(
         self,
@@ -255,18 +313,32 @@ class UR5e(Robot):
         current_tcp_pose: list[float] | None = None,
     ) -> list[float]:
         if not self.config.hold_current_pose_on_idle:
-            return self._target_pose_from_action(action)
+            return self._target_pose_from_action(action, current_tcp_pose)
 
-        if self._has_motion_delta(action):
-            self._force_hold_pose = None
-            return self._target_pose_from_action(action)
-
+        if current_tcp_pose is None:
+            current_tcp_pose = self._arm["rtde_r"].getActualTCPPose()
         if self._force_hold_pose is None:
-            if current_tcp_pose is None:
-                current_tcp_pose = self._arm["rtde_r"].getActualTCPPose()
             self._force_hold_pose = list(current_tcp_pose)
 
-        return list(self._force_hold_pose)
+        action_target_pose = self._target_pose_from_action(action, current_tcp_pose)
+        motion_mask = self._motion_delta_mask(action, current_tcp_pose, action_target_pose)
+
+        for idx, (was_moving, is_moving) in enumerate(zip(self._force_prev_motion_mask, motion_mask)):
+            if was_moving and not is_moving:
+                self._force_hold_pose[idx] = current_tcp_pose[idx]
+
+        if not any(motion_mask):
+            self._force_prev_motion_mask = motion_mask
+            return list(self._force_hold_pose)
+
+        target_pose = list(self._force_hold_pose)
+        for idx, has_delta in enumerate(motion_mask):
+            if has_delta:
+                target_pose[idx] = action_target_pose[idx]
+                self._force_hold_pose[idx] = current_tcp_pose[idx]
+
+        self._force_prev_motion_mask = motion_mask
+        return target_pose
 
     def _calculate_ft_target(self, action: dict[str, Any]) -> list[float]:
         curr_pose = self._arm["rtde_r"].getActualTCPPose()
@@ -376,19 +448,6 @@ class UR5e(Robot):
         
         obs_dict = {}
 
-        for i in range(len(joint_position)):
-            obs_dict[f"joint_{i+1}.pos"] = joint_position[i]
-
-        if self.config.use_gripper:
-            gripper_pos = self._gripper.pos if self._gripper.pos is not None else self._last_gripper_position
-            obs_dict["gripper_raw_position"] = gripper_pos
-            obs_dict["gripper_raw_bin"] = 0 if gripper_pos <= self.config.gripper_bin_threshold else 1
-            obs_dict["gripper_action_bin"] = self._last_gripper_position
-        else:
-            obs_dict["gripper_raw_position"] = 0.0
-            obs_dict["gripper_raw_bin"] = 0.0
-            obs_dict["gripper_action_bin"] = 0.0
-
         axes = ["x", "y", "z", "rx", "ry", "rz"]
         for i, axis in enumerate(axes):
             obs_dict[f"tcp_pose.{axis}"] = observation_tcp_pose[i]
@@ -402,9 +461,26 @@ class UR5e(Robot):
         for i, axis in enumerate(["rx", "ry", "rz"], start=3):
             obs_dict[f"tcp_force.{axis}"] = tcp_force[i]
 
+        if self.config.use_gripper:
+            gripper_pos = self._gripper.pos if self._gripper.pos is not None else self._last_gripper_position
+            obs_dict["gripper_raw_position"] = gripper_pos
+            obs_dict["gripper_raw_bin"] = 0 if gripper_pos <= self.config.gripper_bin_threshold else 1
+            obs_dict["gripper_action_bin"] = self._last_gripper_position
+        else:
+            obs_dict["gripper_raw_position"] = 0.0
+            obs_dict["gripper_raw_bin"] = 0.0
+            obs_dict["gripper_action_bin"] = 0.0
+
+        for i in range(len(joint_position)):
+            obs_dict[f"joint_{i+1}.pos"] = joint_position[i]
+
         for i in range(len(joint_position)):
             obs_dict[f"joint_{i+1}.vel"] = joint_velocity[i]
+
+        for i in range(len(joint_position)):
             obs_dict[f"joint_{i+1}.acc"] = joint_acceleration[i]
+
+        for i in range(len(joint_position)):
             obs_dict[f"joint_{i+1}.force"] = joint_force[i]
 
         for i, axis in enumerate(["x", "y", "z"]):
@@ -436,6 +512,7 @@ class UR5e(Robot):
 
     def stop_force(self):
         self._force_hold_pose = None
+        self._force_prev_motion_mask = [False] * 6
         if self.is_connected and self.config.control_space == "force":
             self._arm["rtde_c"].forceMode(
                 self.task_frame,
@@ -478,14 +555,35 @@ class UR5e(Robot):
         logger.info("Resetting to initial TCP pose.")
         if self.config.debug:
             logger.info("Debug mode is enabled; skip robot reset motion.")
-            return
-
-        if self.config.control_space == "force":
-            self.stop_force()
-            if hasattr(self._arm["rtde_c"], "forceModeStop"):
-                self._arm["rtde_c"].forceModeStop()
-        self._arm["rtde_c"].servoStop()
-        self._arm["rtde_c"].moveL(target_pose, self.config.speed, self.config.acceleration)
+        else:
+            if self.config.control_space == "force":
+                self.stop_force()
+                if hasattr(self._arm["rtde_c"], "forceModeStop"):
+                    self._arm["rtde_c"].forceModeStop()
+            self._arm["rtde_c"].servoStop()
+            self._arm["rtde_c"].moveL(
+                target_pose,
+                self.config.speed,
+                self.config.acceleration,
+            )
+        payload_result = self._arm["rtde_c"].setPayload(
+            self.config.payload_mass,
+            self.config.payload_cog,
+        )
+        if isinstance(payload_result, (bool, np.bool_)) and not bool(payload_result):
+            raise RuntimeError("RTDE setPayload returned False after reset.")
+        time.sleep(PAYLOAD_SETTLE_TIME_S)
+        zero_result = self._arm["rtde_c"].zeroFtSensor()
+        if isinstance(zero_result, (bool, np.bool_)) and not bool(zero_result):
+            raise RuntimeError("RTDE zeroFtSensor returned False after reset.")
+        time.sleep(FT_ZERO_SETTLE_TIME_S)
+        logger.info(
+            "Reapplied payload and zeroed F/T sensor after reset: mass=%s kg, "
+            "cog=%s m, settle_time=%.2f s.",
+            self.config.payload_mass,
+            self.config.payload_cog,
+            PAYLOAD_SETTLE_TIME_S + FT_ZERO_SETTLE_TIME_S,
+        )
         logger.info("Reached initial position.")
 
     def disconnect(self) -> None:

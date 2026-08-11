@@ -10,6 +10,7 @@ from lerobot.utils.utils import log_say
 class ReplayConfig:
     def __init__(self, cfg: Dict[str, Any]):
         robot = cfg["robot"]
+        force_cfg = robot.get("force_mode", {})
 
         # global config
         self.repo_id: str = cfg["repo_id"]
@@ -23,6 +24,10 @@ class ReplayConfig:
         self.gripper_reverse: bool = robot.get("gripper_reverse", False)
         self.gripper_force: int = robot.get("gripper_force", 70)
         self.gripper_speed: int = robot.get("gripper_speed", 60)
+        self.control_frame_euler_deg: list = robot.get(
+            "control_frame_euler_deg",
+            force_cfg.get("control_frame_euler_deg", [0.0, 0.0, 0.0]),
+        )
 
 def run_replay(replay_cfg: ReplayConfig):
     episode_idx = replay_cfg.episode_idx
@@ -35,6 +40,7 @@ def run_replay(replay_cfg: ReplayConfig):
         gripper_reverse=replay_cfg.gripper_reverse,
         gripper_force=replay_cfg.gripper_force,
         gripper_speed=replay_cfg.gripper_speed,
+        control_frame_euler_deg=replay_cfg.control_frame_euler_deg,
     )
 
     robot = UR5e(robot_config)

@@ -5,6 +5,9 @@
   <br>
 </p>
 
+> [!NOTE]
+> 本仓库基于 UR RTDE 和 LeRobot，支持笛卡尔位置/阻抗控制、键盘遥操作与数据采集。
+
 ## 🚀 遥操作平台更新
 
 <div align="center">
@@ -74,23 +77,39 @@ ur5e-help
 
 ## ⚙️ 2. 获取和配置必要参数
 
-### 2.1 获取 RealSense 相机序列号
-请确保每次仅连接一个相机：
+- `record.cameras.enabled: false`：不打开 RealSense 相机，改用固定假画面。
+- `record.robot.use_gripper: false`：不初始化夹爪硬件，也不包含夹爪 action；夹爪 observation 值保持为 `0`。
+
+### 2.1 获取 RealSense 相机序列号（可选）
+
+设置 `record.cameras.enabled: false` 后，将使用固定假图像进行录制，不会导入或打开 RealSense 硬件。启用相机时，在分别获取序列号的过程中请确保每次仅连接一个相机：
+
 ```bash
 tools-check-rs
 ```
 
-### 2.2 固定夹爪串口映射
+### 2.2 固定夹爪串口映射（可选）
+
 例如，将夹爪映射到 `/dev/ur5e_left_gripper`。执行此操作前，请确保仅连接一个夹爪 USB 设备：
+
 ```bash
 map_gripper.sh ur5e_left_gripper
 ```
+
 随后，将设定的映射值填入 `cfg.yaml` 中的 `gripper_port` 字段。
 
 ### 2.3 配置键盘遥操作和机器人参数
+
 打开 `scripts/config/cfg.yaml` 文件，检查机器人 IP、夹爪串口、相机序列号、控制模式、复位位姿、负载和键盘步长等参数。
 
+相机相关字段：
+
+- `cameras.enabled`：为 `True` 时使用配置的 RealSense 相机；为 `False` 时跳过 RealSense 导入和硬件检查，并为 `wrist_image` 与 `exterior_image` 输出固定假画面。
+- `cameras.width` 和 `cameras.height`：真实相机与假相机共用的分辨率。
+- `cameras.dummy_value`：假 RGB 图像的像素值，范围为 `[0, 255]`。
+
 关键机器人字段：
+
 - `control_space`：`"position"` 或 `"force"`。
 - `reference_frame`：`"base"` 或 `"tcp"`。
   - `base`：action 增量在 base 坐标系下表达，`tcp_pose` 观测为绝对位姿。

@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from lerobot.teleoperators.config import TeleoperatorConfig
 
@@ -15,3 +15,7 @@ class UR5eTeleopConfig(TeleoperatorConfig):
     alternate_step_size: float | None = None
     alternate_rot_step_size: float | None = None
     reference_frame: str = "base"
+    control_frame_euler_deg: list = field(
+        default_factory=lambda: [0.0, 0.0, 0.0]
+    )
+    select_vector: list | None = None

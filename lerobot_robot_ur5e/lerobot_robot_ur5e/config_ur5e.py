@@ -28,6 +28,9 @@ class UR5eConfig(RobotConfig):
     pos_delta: float = 0.02
     vel_delta: float = 4.0
     gain_scale: float = 1.5
+    control_frame_euler_deg: list = field(
+        default_factory=lambda: [0.0, 0.0, 0.0]
+    )
     speed: float = 0.5
     acceleration: float = 0.5
     servo_time: float = 0.1

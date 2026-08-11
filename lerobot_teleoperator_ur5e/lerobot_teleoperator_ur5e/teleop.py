@@ -45,6 +45,9 @@ except Exception as e:
     logging.info(f"Could not import pynput: {e}")
 
 
+ACTION_KEYS = ("delta_x", "delta_y", "delta_z", "delta_rx", "delta_ry", "delta_rz")
+
+
 class KeyboardTeleop(Teleoperator):
     """
     Teleop class to use keyboard inputs for control.
@@ -172,6 +175,16 @@ class UR5eTeleop(KeyboardTeleop):
         self.step_size = self.default_step_size
         self.rot_step_size = self.default_rot_step_size
         self.reference_frame = config.reference_frame
+        self.control_frame_euler_deg = self._validate_control_frame_euler(
+            config.control_frame_euler_deg
+        )
+        self.control_to_base_rotation = R.from_euler(
+            "xyz", self.control_frame_euler_deg, degrees=True
+        ).as_matrix()
+        self.use_control_frame = not np.allclose(
+            self.control_frame_euler_deg, [0.0, 0.0, 0.0]
+        )
+        self.select_vector = self._validate_select_vector(config.select_vector)
         self.robot = None
         self.gripper_action = self._get_initial_gripper_action()
 
@@ -218,6 +231,57 @@ class UR5eTeleop(KeyboardTeleop):
         transform[:3, 3] = np.array(tcp_pose[:3], dtype=float)
         return transform
 
+    def _validate_select_vector(self, select_vector: list | None) -> list[float]:
+        if select_vector is None:
+            return [1.0] * len(ACTION_KEYS)
+        if len(select_vector) != len(ACTION_KEYS):
+            raise ValueError(f"select_vector must contain 6 values, got {len(select_vector)}.")
+        values = [float(value) for value in select_vector]
+        if any(value not in (0.0, 1.0) for value in values):
+            raise ValueError(f"select_vector values must be 0 or 1, got {select_vector}.")
+        return values
+
+    def _validate_control_frame_euler(self, euler_deg: list | None) -> list[float]:
+        if euler_deg is None:
+            return [0.0, 0.0, 0.0]
+        if len(euler_deg) != 3:
+            raise ValueError(
+                "control_frame_euler_deg must contain 3 values, "
+                f"got {len(euler_deg)}."
+            )
+        return [float(value) for value in euler_deg]
+
+    def _apply_select_vector_mask(self, action_values: dict[str, float]) -> dict[str, float]:
+        return {
+            key: float(action_values[key]) if self.select_vector[idx] == 1.0 else 0.0
+            for idx, key in enumerate(ACTION_KEYS)
+        }
+
+    def _control_delta_to_base(self, action_values: dict[str, float]) -> dict[str, float]:
+        if not self.use_control_frame:
+            return action_values
+        control_to_base = self.control_to_base_rotation
+        delta_position_control = np.array(
+            [action_values["delta_x"], action_values["delta_y"], action_values["delta_z"]],
+            dtype=float,
+        )
+        delta_rotation_control = R.from_euler(
+            "xyz",
+            [action_values["delta_rx"], action_values["delta_ry"], action_values["delta_rz"]],
+        ).as_matrix()
+
+        delta_position_base = control_to_base @ delta_position_control
+        delta_rotation_base = control_to_base @ delta_rotation_control @ control_to_base.T
+        delta_euler_base = R.from_matrix(delta_rotation_base).as_euler("xyz")
+        return {
+            "delta_x": float(delta_position_base[0]),
+            "delta_y": float(delta_position_base[1]),
+            "delta_z": float(delta_position_base[2]),
+            "delta_rx": float(delta_euler_base[0]),
+            "delta_ry": float(delta_euler_base[1]),
+            "delta_rz": float(delta_euler_base[2]),
+        }
+
     @property
     def action_features(self) -> dict:
         if self.config.use_gripper:
@@ -242,6 +306,11 @@ class UR5eTeleop(KeyboardTeleop):
             }
 
     def _to_reference_delta(self, action_values: dict[str, float]) -> dict[str, float]:
+        action_values = self._apply_select_vector_mask(action_values)
+        action_values = self._control_delta_to_base(action_values)
+        return self._reference_delta_from_base_delta(action_values)
+
+    def _reference_delta_from_base_delta(self, action_values: dict[str, float]) -> dict[str, float]:
         if self.reference_frame == "base":
             return action_values
         if self.reference_frame != "tcp":
@@ -286,7 +355,7 @@ class UR5eTeleop(KeyboardTeleop):
             if key == slash_key and is_pressed and not was_pressed:
                 self._toggle_step_size()
 
-        action_values = {axis: 0.0 for axis in ("delta_x", "delta_y", "delta_z", "delta_rx", "delta_ry", "delta_rz")}
+        action_values = {axis: 0.0 for axis in ACTION_KEYS}
 
         key_mapping = {
             keyboard.KeyCode.from_char("s"): ("delta_x", 1.0, self.step_size),

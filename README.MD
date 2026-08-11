@@ -5,6 +5,9 @@
   <br>
 </p>
 
+> [!NOTE]
+> Built on UR RTDE and LeRobot, this repository supports Cartesian position/impedance control, keyboard teleoperation, and dataset collection.
+
 ## 🚀 Teleoperation Platform Updates
 
 <div align="center">
@@ -74,29 +77,46 @@ ur5e-help
 
 ## ⚙️ 2. Obtain and Configure Necessary Parameters
 
-### 2.1 Get RealSense Camera Serial Number
-Please make sure only one camera is connected at a time.
+- `record.cameras.enabled: false`: do not open RealSense cameras; use fixed dummy images instead.
+- `record.robot.use_gripper: false`: do not initialize gripper hardware or include gripper actions; gripper observation values remain `0`.
+
+### 2.1 Get RealSense Camera Serial Number (Optional)
+
+Set `record.cameras.enabled: false` to record with fixed dummy images without importing or opening RealSense hardware. When cameras are enabled, make sure only one camera is connected at a time while retrieving each serial number.
+
 ```bash
 tools-check-rs
 ```
 
-### 2.2 Map Gripper Serial Port
+### 2.2 Map Gripper Serial Port (Optional)
+
 For example, map the gripper to `/dev/ur5e_left_gripper` and make sure only one gripper USB device is connected:
+
 ```bash
 map_gripper.sh ur5e_left_gripper
 ```
+
 Next, enter the mapped device into the `gripper_port` field in `cfg.yaml`.
 
 ### 2.3 Configure Keyboard Teleoperation and Robot Parameters
+
 Open `scripts/config/cfg.yaml` and check the robot IP, gripper port, camera serial numbers, control mode, reset pose, payload, and keyboard step sizes.
 
+Camera fields:
+
+- `cameras.enabled`: use the configured RealSense cameras when `True`; when `False`, skip RealSense imports and hardware checks and emit fixed dummy frames for `wrist_image` and `exterior_image`.
+- `cameras.width` and `cameras.height`: resolution used by both real and dummy cameras.
+- `cameras.dummy_value`: dummy RGB image intensity in `[0, 255]`.
+
 Key robot fields:
+
 - `control_space`: `"position"` or `"force"`.
 - `reference_frame`: `"base"` or `"tcp"`.
   - `base`: action delta is expressed in the base frame, and `tcp_pose` observation is absolute.
   - `tcp`: action delta is expressed in the current end-effector frame, and `tcp_pose` observation is relative to the episode reference pose.
   - For consistency across UR TCP-offset changes, `tcp_pose` stores the EE/flange pose converted from UR TCP pose and TCP offset.
   - Collected `tcp_pose` and action data use EE/flange semantics; outside that, other UR state reads, reset poses, and low-level control commands still use UR TCP semantics.
+- `robot.force_mode.control_frame_euler_deg` and `teleop.control_frame_euler_deg`: control-frame XYZ Euler orientation relative to the robot base, in degrees. Keyboard deltas are transformed from this control frame to the base frame before the optional base-to-TCP conversion; force mode uses the same orientation for the UR task frame. The default is `[0, 0, 0]`.
 - `init_pose`: reset TCP pose `[x, y, z, roll, pitch, yaw]`; rotation is configured as XYZ Euler angles in radians and converted to a UR rotation vector internally.
 - `init_pose_range`: random reset pose range for `[x, y, z, roll_deg, pitch_deg, yaw_deg]`; rotation range is in degrees.
 - `teleop.position_step_size`: keyboard translation delta for position control.
