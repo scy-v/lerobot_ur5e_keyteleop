@@ -1,5 +1,5 @@
 record:
-  repo_id: &repo_id "scylearning/extinguish_alcohol_lamp"
+  repo_id: &repo_id "scylearning/test_name"
   # repo_id: &repo_id "scylearning/pick_greencube_into_trashbin" 
   # Suggested format: <hf_username>/<description>, description = task.description -> Verb_SourceObject_prep_TargetObject
   # e.g. Pick up the green cube and put it into the trash bin -> pick_greencube_into_trashbin
@@ -20,7 +20,7 @@ record:
     control_space: "force" # "position" or "force"
     reference_frame: "tcp" # "base" or "tcp"; tcp_pose fields store EE/flange pose after removing UR TCP offset
     init_pose: [0.392232, 0.104898, 0.355162, -3.14, 0.0, -1.57] # robot reset TCP pose [x, y, z, roll, pitch, yaw] in radians
-    init_pose_range: [0.02, 0.02, 0.02, 0.0, 0.0, 0.0] # max random range for reset TCP pose [x, y, z, roll_deg, pitch_deg, yaw_deg]
+    init_pose_range: [0.03, 0.03, 0.03, 0.0, 0.0, 0.0] # max random range for reset TCP pose [x, y, z, roll_deg, pitch_deg, yaw_deg]
     force_mode:
       hold_current_pose_on_idle: True # if True, hold the current actual TCP pose when no motion key is pressed
       kp: 1200
@@ -28,7 +28,7 @@ record:
       kp_rot: 2000
       kd_rot: 400
       rtde_freq: 100
-      select_vector: [1, 1, 1, 0, 0, 1]
+      select_vector: [1, 1, 1, 1, 1, 1]
       force_limit: [2, 2, 2, 2, 2, 2]
       pos_delta: 0.048
       vel_delta: 4.0                                                                                                                                                                                                                                                                                                                                                                                    
@@ -54,7 +54,7 @@ record:
     control_frame_euler_deg: *control_frame_euler_deg
 
   task:
-    description: "Extinguish the alcohol lamp" # task description
+    description: "test_description" # task description
     num_episodes: 120 # number of episodes to record
     display: True # Whether to display the data during recording
     resume: False
